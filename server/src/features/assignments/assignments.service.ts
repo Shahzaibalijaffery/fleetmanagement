@@ -14,6 +14,7 @@ import { requestsRepository } from '../requests/requests.repository';
 import type {
   Assignment,
   AssignmentDocument,
+  AssignmentFilter,
   ListAssignmentsQuery,
 } from './assignments.types';
 import { assignmentsRepository } from './assignments.repository';
@@ -126,7 +127,7 @@ export const assignmentsService = {
     role: 'owner' | 'driver',
     query: ListAssignmentsQuery,
   ) {
-    const filter =
+    const filter: AssignmentFilter =
       role === 'driver' ? { driverId: userId } : { ownerId: userId };
 
     if (query.status) {

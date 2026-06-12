@@ -15,6 +15,7 @@ import type {
   CarRequestDocument,
   CreateRequestInput,
   ListRequestsQuery,
+  RequestFilter,
 } from './requests.types';
 import { requestsRepository } from './requests.repository';
 
@@ -101,7 +102,8 @@ export const requestsService = {
     role: 'owner' | 'driver',
     query: ListRequestsQuery,
   ) {
-    const filter = role === 'driver' ? { driverId: userId } : { ownerId: userId };
+    const filter: RequestFilter =
+      role === 'driver' ? { driverId: userId } : { ownerId: userId };
 
     if (query.status) {
       filter.status = query.status;

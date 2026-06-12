@@ -46,7 +46,10 @@ const contractBodySchema = z.object({
   maintenanceChecklist: z.array(maintenanceItemSchema).optional(),
 });
 
-function validateContractBody<T extends z.infer<typeof contractBodySchema>>(data: T) {
+function validateContractBody(data: {
+  maintenanceChecklist?: { scheduleType: string }[];
+  initialOdometerKm?: number;
+}) {
   const items = data.maintenanceChecklist ?? [];
   const hasMileageItems = items.some((item) => item.scheduleType === 'mileage');
 
