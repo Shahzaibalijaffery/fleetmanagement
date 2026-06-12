@@ -1,0 +1,115 @@
+---
+description: FleetLink performance standards — rendering, lists, navigation, and data loading
+globs: mobile/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# FleetLink Performance Standards
+
+## Golden Rule
+
+Optimize for perceived performance and smooth UX first. Measure before micro-optimizing.
+
+## Re-render Prevention
+
+```tsx
+// ❌ BAD — new object every render causes child re-render
+<TripCard style={{ marginBottom: 16 }} trip={trip} />
+
+// ✅ GOOD — styles in separate file, stable references
+<TripCard trip={trip} />
+```
+
+- Do not pass inline objects, arrays, or arrow functions to memoized children.
+- Lift state down — keep state as close to where it's needed as possible.
+- Split large screens into smaller components so state changes affect fewer nodes.
+- Use `React.memo` only when profiling or logic shows a measurable benefit — not by default.
+
+## Memoization Guidelines
+
+| Hook | Use when | Skip when |
+|------|----------|-----------|
+| `useMemo` | Expensive computation (filter/sort 1000+ items) | Simple string concat, trivial math |
+| `useCallback` | Passed to memoized child or used in effect deps | Handler only used in same component's JSX |
+| `React.memo` | Pure component re-renders often with same props | Component always gets new props |
+
+**Default: no memoization.** Add it when you observe a problem.
+
+## Lists — FlashList Required
+
+```tsx
+// ❌ BAD
+<FlatList data={trips} renderItem={...} />
+
+// ✅ GOOD
+<FlashList
+  data={trips}
+  renderItem={renderTrip}
+  estimatedItemSize={80}
+  keyExtractor={(item) => item.id}
+  onEndReached={fetchNextPage}
+  onEndReachedThreshold={0.5}
+/>
+```
+
+- Use `@shopify/flash-list` for any list that may exceed 20 items.
+- Always provide `estimatedItemSize`.
+- Always provide stable `keyExtractor`.
+- Extract `renderItem` with `useCallback` when passed to FlashList.
+
+## Pagination & Data Loading
+
+- Server-driven pagination for all list endpoints (`page`, `limit`, `total`).
+- React Query `useInfiniteQuery` for infinite scroll lists.
+- Prefetch next page when user is near the end.
+- Debounce search inputs (300ms minimum) — never fire API on every keystroke.
+- Cancel in-flight requests on unmount or query change (React Query handles this; ensure `signal` passed in Axios for manual calls).
+
+## Navigation Performance
+
+- Use React Navigation's native stack for primary flows.
+- Lazy-load heavy screens with dynamic import where supported.
+- Do not mount heavy modals/lists until opened.
+- Cache inactive screens when back-navigation is frequent (default stack behavior).
+- Avoid passing large objects through route params — pass IDs, fetch in screen hook.
+
+## Images & Assets
+
+- Use appropriately sized images. No full-resolution photos in list thumbnails.
+- Prefer `expo-image` with caching for remote images.
+- Lazy-load non-critical images below the fold.
+
+## Network
+
+- React Query `staleTime` and `gcTime` tuned per data type:
+  - Static config: 30 min stale
+  - Lists: 1–5 min stale
+  - Real-time data (driver location): 0 stale, polling or WebSocket
+- Background refetch on app focus (`refetchOnWindowFocus: true` for mobile app state).
+- Batch related requests where the API supports it — avoid waterfall fetches.
+
+## MMKV for Sync Reads
+
+- Auth tokens, theme preference, onboarding flags → MMKV (synchronous, no flash).
+- Never block render waiting for AsyncStorage.
+
+## Performance Review Checklist
+
+Before shipping a screen:
+
+- [ ] Lists use FlashList with pagination
+- [ ] No inline styles or inline object props on list items
+- [ ] Search is debounced
+- [ ] Heavy screens are not eagerly loaded
+- [ ] React Query cache config is appropriate
+- [ ] No `console.log` in production paths
+
+## Anti-Patterns
+
+| Pattern | Problem |
+|---------|---------|
+| `useMemo` everywhere | Noise, maintenance cost |
+| Fetching in `useEffect` without React Query | No cache, no retry, no cancellation |
+| Rendering 500 items without virtualization | Jank |
+| Polling every 1s when 30s suffices | Battery + server load |
+| Storing entire API response in Zustand | Duplicates React Query cache |

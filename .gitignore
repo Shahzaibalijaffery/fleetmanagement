@@ -1,0 +1,131 @@
+# --- Dependencies ---
+node_modules/
+.pnp
+.pnp.js
+
+# --- Environment & secrets (never commit) ---
+.env
+.env.*
+!.env.example
+!.env*.example
+*.pem
+*.key
+*.p12
+*.jks
+*.p8
+*.mobileprovision
+*.keystore
+secrets/
+credentials/
+
+# --- Build outputs ---
+dist/
+build/
+out/
+.next/
+web-build/
+*.tsbuildinfo
+
+# --- Logs & debug ---
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# --- Test & coverage ---
+coverage/
+.nyc_output/
+*.lcov
+
+# --- OS ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# --- IDEs & editors ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.iml
+*.sublime-project
+*.sublime-workspace
+
+# --- Cursor / Claude (local agent state) ---
+.cursor/plans/
+.cursor/projects/
+.claude/
+
+# --- Server (Node/Express) ---
+server/dist/
+server/coverage/
+server/.env
+server/.env.*
+
+# --- Mobile (React Native) ---
+mobile/node_modules/
+mobile/.env
+mobile/.env.*
+
+# Expo leftovers
+.expo/
+.expo-shared/
+expo-env.d.ts
+
+# Metro
+.metro-health-check*
+
+# React Native / native build artifacts (keep ios/ & android/ source, ignore builds)
+mobile/android/app/build/
+mobile/android/build/
+mobile/android/.gradle/
+mobile/android/local.properties
+mobile/android/.cxx/
+mobile/android/captures/
+mobile/android/*.hprof
+
+mobile/ios/build/
+mobile/ios/Pods/
+mobile/ios/*.xcworkspace/xcuserdata/
+mobile/ios/*.xcodeproj/xcuserdata/
+mobile/ios/*.xcodeproj/project.xcworkspace/xcuserdata/
+mobile/ios/DerivedData/
+mobile/ios/*.pbxuser
+mobile/ios/*.mode1v3
+mobile/ios/*.mode2v3
+mobile/ios/*.perspectivev3
+mobile/ios/*.xcuserstate
+mobile/ios/.xcode.env.local
+
+mobile/.kotlin/
+mobile/*.orig.*
+
+# Fastlane
+**/fastlane/report.xml
+**/fastlane/Preview.html
+**/fastlane/screenshots/
+**/fastlane/test_output/
+
+# Temporary & cache
+tmp/
+temp/
+.cache/
+.turbo/
+.eslintcache
+*.tmp
+*.temp
+
+# Package manager locks in wrong places (optional — keep root locks if added later)
+# package-lock.json is committed in mobile/ and server/

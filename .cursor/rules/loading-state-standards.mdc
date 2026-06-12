@@ -1,0 +1,146 @@
+---
+description: FleetLink loading state standards — skeletons, empty, error, and success UX
+globs: mobile/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# FleetLink Loading State Standards
+
+## Non-Negotiable
+
+Every data-driven screen MUST implement all four states:
+
+1. **Loading** — skeleton/shimmer (never blank, never spinner-only)
+2. **Empty** — helpful message + optional action
+3. **Error** — message + retry button
+4. **Success** — actual content
+
+## State Decision Tree
+
+```
+Is data loading for the first time?
+  → Show skeleton/shimmer matching final layout
+
+Did the request fail?
+  → Show error message + retry action
+
+Did the request succeed with zero items?
+  → Show empty state with context + CTA
+
+Did the request succeed with data?
+  → Show content
+```
+
+## Skeleton & Shimmer (Required for Loading)
+
+```tsx
+// ❌ BAD
+if (isLoading) return <ActivityIndicator />;
+
+// ❌ BAD
+if (isLoading) return null;
+
+// ✅ GOOD
+if (isLoading) return <TripListSkeleton count={5} />;
+```
+
+- Skeletons must mirror the final layout (card shape, text line placeholders, avatar circles).
+- Use shared `Skeleton` and `Shimmer` components from `shared/components/loading/`.
+- For lists: render 3–5 skeleton rows, not one generic block.
+- Pull-to-refresh shows a subtle indicator — do not replace content with a full-screen spinner.
+
+## Empty State
+
+```tsx
+<EmptyState
+  icon="car"
+  title="No trips yet"
+  message="When you accept a trip, it will appear here."
+  actionLabel="Go Online"
+  onAction={handleGoOnline}
+/>
+```
+
+- Title: what is empty (specific, not "No data")
+- Message: why it might be empty or what to do next
+- Action: one clear CTA when applicable
+- Use shared `EmptyState` component
+
+## Error State
+
+```tsx
+<ErrorState
+  message="Couldn't load trips. Check your connection."
+  onRetry={refetch}
+/>
+```
+
+- User-friendly message — no stack traces, no status codes
+- Always provide `onRetry` when data can be refetched
+- Distinguish network errors from server errors only when the UX differs
+
+## Success State
+
+- Render actual content
+- Show inline toast/snackbar for mutation success — do not navigate away silently
+- Optimistic updates: show expected result immediately, rollback on error with toast
+
+## React Query Integration
+
+```tsx
+const { data, isLoading, isError, error, refetch, isFetching } = useTrips();
+
+if (isLoading) return <TripListSkeleton />;
+if (isError) return <ErrorState message={getErrorMessage(error)} onRetry={refetch} />;
+if (!data?.length) return <EmptyState title="No trips" ... />;
+
+return (
+  <>
+    <TripList trips={data} />
+    {isFetching && <SubtleRefreshIndicator />}
+  </>
+);
+```
+
+- `isLoading` → first load skeleton
+- `isFetching` + existing data → keep showing data, subtle refresh indicator
+- `isError` + no cached data → full error state
+- `isError` + cached data → show stale data + error banner with retry
+
+## Mutation Loading
+
+- Button shows loading state (`loading` prop on `Button`) — disable to prevent double-submit
+- Do not block the entire screen for a single action
+- Use optimistic updates for toggles (online/offline, favorite) when rollback is straightforward
+
+## Form Loading
+
+- Submit button shows loading spinner inside the button
+- Disable form fields during submit
+- Show validation errors inline per field (React Hook Form) — not alert dialogs
+
+## Shared Loading Components (Required)
+
+Located in `shared/components/loading/`:
+
+| Component | Use |
+|-----------|-----|
+| `Skeleton` | Base shimmer block |
+| `Shimmer` | Animated shimmer wrapper |
+| `TripCardSkeleton` | Domain-specific skeleton |
+| `ListSkeleton` | Generic list placeholder |
+| `EmptyState` | Zero-data state |
+| `ErrorState` | Failed fetch state |
+| `ScreenLoader` | Full-screen skeleton layout (rare — prefer inline skeletons) |
+
+Create domain skeletons alongside feature components when layout is unique.
+
+## Anti-Patterns
+
+| Pattern | Why it's wrong |
+|---------|----------------|
+| Blank white screen while loading | User thinks app is broken |
+| Full-screen `ActivityIndicator` | Jarring, no layout preview |
+| Error as `Alert.alert()` only | No retry, blocks interaction |
+| Hiding empty state | User confused if list is broken or truly empty |
+| Loading gate on parent that unmounts children | Loses scroll position and cache benefits |

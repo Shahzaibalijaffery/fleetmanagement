@@ -1,0 +1,113 @@
+---
+description: FleetLink master rule — project identity, stack, and non-negotiable principles
+alwaysApply: true
+---
+
+# FleetLink Master Rule
+
+## Project
+
+**FleetLink** is a production-grade car owner ↔ driver marketplace and fleet management platform.
+
+## Monorepo Layout
+
+```
+fleetlink/
+├── mobile/          # React Native (Expo) — TypeScript
+└── server/          # Node.js + Express — TypeScript
+```
+
+## Tech Stack (Do Not Deviate Without Approval)
+
+| Layer | Stack |
+|-------|-------|
+| Mobile | React Native, TypeScript, React Navigation, Zustand, TanStack React Query, React Hook Form, Axios, FlashList, MMKV |
+| Backend | Node.js, Express.js, TypeScript, MongoDB, Mongoose, JWT |
+| Auth | JWT access tokens + refresh tokens, bcrypt, secure storage (MMKV on mobile) |
+
+## Core Principles (Always Enforce)
+
+1. **Simple over clever** — Prefer the obvious solution. No premature abstractions.
+2. **Readable over compact** — Clear names, flat logic, small files.
+3. **Reusable over duplicated** — Extract only after the second real use case.
+4. **Separation of concerns** — UI, state, API, and business logic stay in their layers.
+5. **Production UX** — Every screen has loading, empty, error, and success states. Never blank screens.
+6. **Type safety** — No `any`. Strict TypeScript on both mobile and server.
+7. **No over-engineering** — No factories, generic base classes, or "future-proof" layers without a concrete need.
+
+## Before Every Implementation
+
+**Follow `implementation-workflow.mdc` — mandatory for every prompt.**
+
+1. Read **all** files in `.cursor/rules/`.
+2. Complete `review-checklist.mdc`.
+3. Validate compliance — refuse to generate code that violates any rule.
+4. State which rules are applied in the response.
+5. Refactor any solution that conflicts with rules before presenting it.
+6. Match existing folder structure and naming conventions in the target package.
+
+## Decision Hierarchy
+
+When rules conflict, prioritize in this order:
+
+1. Security and data integrity
+2. User experience (loading states, performance)
+3. Simplicity and readability
+4. Reusability
+5. Scalability (only when backed by a real requirement)
+
+## Forbidden Patterns (Project-Wide)
+
+- Business logic inside Mongoose models or React components
+- API calls directly inside UI components
+- `any`, `@ts-ignore`, or unchecked `as` casts without justification
+- Class components (React Native)
+- Inline styles in React Native
+- Blank screens or spinner-only loading UX
+- Mixing server state (React Query) with app state (Zustand)
+- God files (>200 lines) without splitting
+- Over-abstracted helpers used once
+- Skipping input validation on the server
+
+## File Size Limits
+
+| Type | Max Lines (guideline) |
+|------|----------------------|
+| Component | 150 |
+| Hook | 80 |
+| Service / Repository | 120 |
+| Controller | 80 |
+| Route file | 60 |
+
+Split when approaching limits. Do not wait until files are unmaintainable.
+
+## Naming Conventions
+
+| Item | Convention | Example |
+|------|------------|---------|
+| React components | PascalCase | `TripCard.tsx` |
+| Hooks | camelCase, `use` prefix | `useTrips.ts` |
+| Services | camelCase + `.service.ts` | `trip.service.ts` |
+| Repositories | camelCase + `.repository.ts` | `trip.repository.ts` |
+| Controllers | camelCase + `.controller.ts` | `trip.controller.ts` |
+| Types | PascalCase | `Trip`, `DriverProfile` |
+| Constants | SCREAMING_SNAKE_CASE | `MAX_PAGE_SIZE` |
+| Feature folders | kebab-case | `trip-management/` |
+
+## Related Rules
+
+| Rule File | Scope |
+|-----------|-------|
+| `implementation-workflow.mdc` | Mandatory workflow for every implementation |
+| `review-checklist.mdc` | Mandatory pre-implementation review |
+| `coding-standards.mdc` | Code quality and TypeScript |
+| `architecture-standards.mdc` | Folder structure and layers |
+| `api-standards.mdc` | HTTP, React Query, Axios |
+| `performance-standards.mdc` | Rendering and data performance |
+| `loading-state-standards.mdc` | UX states and skeletons |
+| `state-management.mdc` | Zustand vs React Query vs RHF |
+| `react-native-standards.mdc` | Mobile-specific patterns |
+| `nodejs-backend-standards.mdc` | Express backend patterns |
+| `database-standards.mdc` | Mongoose and repositories |
+| `security-standards.mdc` | Auth, validation, sanitization |
+| `ui-standards.mdc` | Theme, components, spacing |

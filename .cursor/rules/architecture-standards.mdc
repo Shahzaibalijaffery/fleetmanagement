@@ -1,0 +1,151 @@
+---
+description: FleetLink architecture — feature-based structure, layers, and separation of concerns
+alwaysApply: true
+---
+
+# FleetLink Architecture Standards
+
+## Architecture Style
+
+**Feature-based modular monolith** on both mobile and server. Each feature is self-contained. Shared code is extracted only when genuinely reused.
+
+## Mobile Structure (`mobile/src/`)
+
+```
+src/
+├── app/                    # App entry, providers, navigation root
+│   ├── navigation/
+│   └── providers/
+├── features/               # Feature modules (primary organization unit)
+│   ├── auth/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   ├── screens/
+│   │   ├── services/
+│   │   ├── types/
+│   │   └── index.ts        # Public API of the feature
+│   ├── trips/
+│   ├── fleet/
+│   └── drivers/
+├── shared/                 # Cross-feature utilities (use sparingly)
+│   ├── api/                # Axios instance, interceptors
+│   ├── components/         # Reusable UI primitives
+│   ├── hooks/
+│   ├── theme/
+│   ├── types/
+│   └── utils/
+└── stores/                 # Zustand stores (app-level state only)
+```
+
+## Server Structure (`server/src/`)
+
+```
+src/
+├── app.ts                  # Express app setup
+├── server.ts               # Server bootstrap
+├── config/                 # Environment, DB connection
+├── features/               # Feature modules
+│   ├── auth/
+│   │   ├── auth.controller.ts
+│   │   ├── auth.service.ts
+│   │   ├── auth.repository.ts
+│   │   ├── auth.routes.ts
+│   │   ├── auth.validation.ts
+│   │   └── auth.types.ts
+│   ├── trips/
+│   └── fleet/
+├── middleware/             # Auth, error handler, rate limit
+├── models/                 # Mongoose schemas (data shape only)
+├── shared/
+│   ├── errors/
+│   ├── types/
+│   └── utils/
+└── routes/                 # Route aggregator (mounts feature routes)
+```
+
+## Layer Responsibilities
+
+### Mobile
+
+| Layer | Responsibility | Must NOT |
+|-------|----------------|----------|
+| `screens/` | Layout composition, wire hooks to UI | Fetch data directly, contain business logic |
+| `components/` | Presentational UI, props in / events out | Call APIs, access Zustand globally |
+| `hooks/` | React Query wrappers, local UI state orchestration | Render JSX |
+| `services/` | Axios calls, request/response mapping | Manage React state |
+| `stores/` | Session, theme preference, onboarding flags | Store server-fetched lists |
+
+### Server
+
+| Layer | Responsibility | Must NOT |
+|-------|----------------|----------|
+| `routes/` | HTTP method + path → controller | Business logic, DB queries |
+| `controllers/` | Parse request, call service, send response | DB queries, complex business rules |
+| `services/` | Business logic, orchestration | Direct `req`/`res` access |
+| `repositories/` | Mongoose queries, data access | Business rules, HTTP concerns |
+| `models/` | Schema, indexes, virtuals (display only) | Business logic, service calls |
+| `validation/` | Input schema validation | Business logic |
+| `middleware/` | Cross-cutting (auth, errors, logging) | Feature-specific logic |
+
+## Data Flow
+
+```
+Mobile:  Screen → Hook (React Query) → Service (Axios) → API
+Server:  Route → Controller → Service → Repository → Model → MongoDB
+```
+
+Never skip layers. Never call a repository from a controller.
+
+## Feature Module Rules
+
+1. Features expose a public API via `index.ts` — other features import from there, not deep paths.
+2. Features do not import from other features' internals — only from their `index.ts` or `shared/`.
+3. New screens belong inside the feature that owns the domain.
+4. Cross-feature navigation uses typed route params, not global event buses.
+
+## Shared vs Feature Code
+
+| Put in `shared/` when | Keep in feature when |
+|-----------------------|----------------------|
+| Used by 2+ features | Used by one feature only |
+| Generic UI primitive (Button, Input) | Domain-specific component (TripCard) |
+| Axios client, theme tokens | Trip-specific query hooks |
+
+## Modular Design Principles
+
+- **High cohesion** — Files in a feature change together.
+- **Low coupling** — Features communicate through services/APIs, not shared mutable state.
+- **Dependency direction** — Always inward: UI → hooks → services → API. Never reverse.
+- **No circular dependencies** — If detected, extract to `shared/`.
+
+## New Feature Checklist
+
+When adding a feature (e.g., `bookings`):
+
+```
+mobile/src/features/bookings/
+  components/
+  hooks/
+  screens/
+  services/
+  types/
+  index.ts
+
+server/src/features/bookings/
+  bookings.controller.ts
+  bookings.service.ts
+  bookings.repository.ts
+  bookings.routes.ts
+  bookings.validation.ts
+  bookings.types.ts
+```
+
+Register routes in server aggregator and screens in navigation.
+
+## Anti-Patterns
+
+- `components/` folder at root with 50 unrelated components
+- `utils/helpers.ts` with 500 lines
+- Controllers with 200-line `if/else` chains
+- Models with `pre('save')` hooks containing business rules
+- Mobile `api/` folder with all endpoints in one file (split by feature service)

@@ -1,0 +1,150 @@
+---
+description: FleetLink React Native standards — components, styles, theme, and navigation
+globs: mobile/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# FleetLink React Native Standards
+
+## Components
+
+- **Functional components only** — no class components, ever
+- **One component per file** — file name matches component name
+- **Presentational by default** — screens compose; components receive props and emit events
+- **Small components** — if JSX exceeds ~60 lines, extract sub-components
+
+```tsx
+// TripCard.tsx — presentational
+interface TripCardProps {
+  trip: Trip;
+  onPress: (tripId: string) => void;
+}
+
+export function TripCard({ trip, onPress }: TripCardProps) {
+  return (
+    <Pressable onPress={() => onPress(trip.id)} style={styles.card}>
+      <Text style={styles.route}>{trip.pickup} → {trip.dropoff}</Text>
+      <Text style={styles.fare}>{formatCurrency(trip.fare)}</Text>
+    </Pressable>
+  );
+}
+```
+
+## Styles — Separate Files, No Inline
+
+```tsx
+// TripCard.styles.ts
+import { StyleSheet } from 'react-native';
+import { spacing, colors, typography } from '@/shared/theme';
+
+export const styles = StyleSheet.create({
+  card: {
+    padding: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  route: {
+    ...typography.body,
+    color: colors.textPrimary,
+  },
+});
+```
+
+**Rules:**
+- Every component with styles has a `.styles.ts` sibling file
+- No inline `style={{ }}` — except truly dynamic values (e.g., `{ width: progress * 100 }`)
+- Even dynamic values should use theme tokens: `colors.primary`, not `'#2563eb'`
+
+## Theme — Light & Dark Mode
+
+```tsx
+// Use theme hook — never hardcode colors
+const { colors } = useTheme();
+
+<Text style={[styles.title, { color: colors.textPrimary }]} />
+```
+
+- All colors from `shared/theme/colors.ts` — light and dark palettes
+- `useTheme()` hook reads Zustand/MMKV preference + system setting
+- Test every new screen in both light and dark mode
+- StatusBar style adapts to theme
+
+## Theme Tokens (Required)
+
+```typescript
+// shared/theme/
+colors.ts      // light + dark palettes
+spacing.ts     // 4, 8, 12, 16, 24, 32, 48
+typography.ts  // heading, body, caption, label
+radius.ts      // sm, md, lg, full
+shadows.ts     // card, modal
+```
+
+Never use raw numbers for spacing in components — use `spacing.md`, etc.
+
+## Navigation
+
+- React Navigation with typed routes (`RootStackParamList`)
+- Route params: pass IDs, not full objects
+- Screen files live in `features/{name}/screens/`
+- Navigation logic in hooks or screen — not in shared components
+- Deep linking configured per feature as needed
+
+```typescript
+// app/navigation/types.ts
+export type RootStackParamList = {
+  TripDetail: { tripId: string };
+  DriverProfile: { driverId: string };
+};
+```
+
+## Screens Pattern
+
+```tsx
+// features/trips/screens/TripListScreen.tsx
+export function TripListScreen() {
+  const { data, isLoading, isError, refetch } = useTrips();
+  const navigation = useNavigation<TripListNav>();
+
+  if (isLoading) return <TripListSkeleton />;
+  if (isError) return <ErrorState onRetry={refetch} />;
+  if (!data?.length) return <EmptyState title="No trips" />;
+
+  return <TripList trips={data} onTripPress={(id) => navigation.navigate('TripDetail', { tripId: id })} />;
+}
+```
+
+Screen = thin orchestrator. No Axios. No business logic.
+
+## Hooks
+
+- Feature hooks in `features/{name}/hooks/`
+- Shared hooks in `shared/hooks/`
+- Query hooks wrap React Query + service
+- One hook per concern (`useTrips`, `useAcceptTrip` — not `useTripEverything`)
+
+## Responsive Layouts
+
+- Use `flex` — avoid fixed pixel widths for containers
+- Use `useWindowDimensions` or percentage for adaptive layouts
+- Safe area via `SafeAreaView` or `useSafeAreaInsets`
+- Test on small (iPhone SE) and large (Pro Max) simulators
+- Tablet: consider two-column layouts where appropriate
+
+## Accessibility
+
+- `accessibilityLabel` on interactive elements without visible text
+- Minimum touch target 44x44
+- Sufficient color contrast in both themes
+
+## Anti-Patterns
+
+| Pattern | Fix |
+|---------|-----|
+| Class component | Functional + hooks |
+| `StyleSheet` inline in component file | Separate `.styles.ts` |
+| Hardcoded `#fff`, `#000` | Theme tokens |
+| 300-line screen component | Split into sub-components + hook |
+| `navigation.navigate` in shared Button | Pass `onPress` from screen |
+| `fetch()` in component | Service + React Query hook |

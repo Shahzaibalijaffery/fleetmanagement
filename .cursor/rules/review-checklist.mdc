@@ -1,0 +1,89 @@
+---
+description: Mandatory pre-implementation review checklist for every FleetLink task
+alwaysApply: true
+---
+
+# FleetLink Review Checklist
+
+**Complete this review BEFORE writing or modifying code.** Follow `implementation-workflow.mdc` first — read all rules in `.cursor/rules/`, then complete this checklist. State the review outcome in your plan or first implementation message.
+
+## 1. Architecture Review
+
+- [ ] Does this belong in an existing feature module, or does a new feature folder need to be created?
+- [ ] Is the change in the correct layer (component / hook / service / controller / repository)?
+- [ ] Will this create duplication? Can an existing utility, hook, or service be reused?
+- [ ] Does the folder structure match `architecture-standards.mdc`?
+- [ ] Is the solution the simplest one that satisfies the requirement?
+
+## 2. Performance Review
+
+- [ ] Will this cause unnecessary re-renders? (new object/array literals in render, missing `key`, unstable callbacks)
+- [ ] Is a list involved? If yes → FlashList + pagination required.
+- [ ] Is memoization (`memo`, `useMemo`, `useCallback`) needed, or premature?
+- [ ] Are large assets or screens lazy-loaded?
+- [ ] Is navigation caching appropriate (e.g., `detachInactiveScreens`)?
+
+## 3. Loading State Review
+
+- [ ] What does the user see while data loads? (skeleton/shimmer — not blank, not spinner-only)
+- [ ] What does the user see when the list is empty?
+- [ ] What does the user see on error? (message + retry action)
+- [ ] What does the user see on success?
+- [ ] Are optimistic updates appropriate for mutations?
+
+## 4. Type Safety Review
+
+- [ ] Are request and response types defined in shared or feature `types/` folders?
+- [ ] Are API errors typed and handled?
+- [ ] Are form values typed with React Hook Form generics?
+- [ ] Is `any` avoided entirely?
+
+## 5. Reusability Review
+
+- [ ] Can UI use existing `Button`, `Input`, `Card`, `Modal`, or loading components?
+- [ ] Can logic use an existing hook or service?
+- [ ] If creating something new, will it be used in more than one place — or is inline code simpler?
+
+## 6. API & State Review
+
+- [ ] Server data → React Query only (no Zustand, no `useState` for fetched data)
+- [ ] App/session state → Zustand only
+- [ ] Form state → React Hook Form only
+- [ ] API calls go through service layer + React Query hooks — never directly in components
+- [ ] Query keys, invalidation, and cache times defined?
+
+## 7. Backend Review (if server changes)
+
+- [ ] Route → Controller → Service → Repository chain followed?
+- [ ] Input validated with a validation layer (Zod/Joi) before the controller?
+- [ ] Errors handled by centralized error middleware?
+- [ ] No business logic in models or routes?
+- [ ] Indexes considered for new query patterns?
+
+## 8. Security Review (if auth/data changes)
+
+- [ ] Inputs validated and sanitized on the server?
+- [ ] Passwords hashed with bcrypt (never stored plain)?
+- [ ] JWT access + refresh token flow respected?
+- [ ] Sensitive tokens stored in MMKV (mobile), never AsyncStorage?
+- [ ] Authorization checked in middleware/service — not just on the client?
+
+## Review Output Template
+
+When starting work, briefly state:
+
+```
+Review: [feature name]
+Architecture: [layer + folder]
+Performance: [list? memo? pagination?]
+Loading states: [skeleton / empty / error / success plan]
+Types: [key types involved]
+Reusability: [existing components/hooks used or new ones justified]
+State: [React Query / Zustand / RHF assignment]
+```
+
+## Block Implementation If
+
+- Any checklist item is unresolved and would violate a rule
+- The proposed solution adds abstraction without a second use case
+- A screen would ship without all four UX states (loading, empty, error, success)

@@ -1,0 +1,127 @@
+---
+description: FleetLink state management — Zustand, React Query, and React Hook Form boundaries
+globs: mobile/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# FleetLink State Management
+
+## Three Tools, Three Jobs
+
+| Tool | Owns | Examples |
+|------|------|----------|
+| **React Query** | Server/async state | Trips list, driver profile, fleet data |
+| **Zustand** | Client/app state | Auth session flags, theme mode, onboarding step, UI preferences |
+| **React Hook Form** | Form state | Login form, vehicle registration, trip filters form |
+
+**Never mix responsibilities.** If it came from the API, it lives in React Query. If it's a user preference or session flag, it lives in Zustand. If it's a form field, it lives in RHF.
+
+## React Query — Server State
+
+```typescript
+// ✅ Fetch and cache server data
+const { data: trips } = useTrips();
+
+// ❌ Do not copy to Zustand
+useEffect(() => {
+  if (trips) setTripsInStore(trips);
+}, [trips]);
+```
+
+- Single source of truth for all API data
+- Derive computed values with `useMemo` in hooks — do not duplicate in store
+- Auth token storage is MMKV (sync read) — not Zustand, not React Query
+
+## Zustand — App State
+
+```typescript
+// stores/auth.store.ts
+interface AuthState {
+  isAuthenticated: boolean;
+  setAuthenticated: (value: boolean) => void;
+}
+
+export const useAuthStore = create<AuthState>((set) => ({
+  isAuthenticated: false,
+  setAuthenticated: (value) => set({ isAuthenticated: value }),
+}));
+```
+
+### Belongs in Zustand
+
+- `isAuthenticated` boolean (derived from token presence)
+- Theme mode preference (`light` | `dark` | `system`)
+- Onboarding completed flag
+- Active filter tab selection (if not URL/route based)
+- Bottom sheet open/close (if not route-based)
+
+### Does NOT belong in Zustand
+
+- Trip lists, driver data, fleet vehicles (→ React Query)
+- Form field values (→ React Hook Form)
+- Navigation state (→ React Navigation)
+
+### Store Rules
+
+- One store per domain (`auth.store.ts`, `ui.store.ts`) — not one mega-store
+- No async logic in stores — async lives in services + React Query
+- Use selectors to prevent unnecessary re-renders: `useAuthStore((s) => s.isAuthenticated)`
+- Persist only via MMKV middleware when needed — not AsyncStorage
+
+## React Hook Form — Form State
+
+```typescript
+const { control, handleSubmit, formState: { errors } } = useForm<LoginForm>({
+  resolver: zodResolver(loginSchema),
+  defaultValues: { email: '', password: '' },
+});
+```
+
+- All forms use RHF + Zod validation schema
+- Validation schemas in feature `validation/` or co-located with form
+- Submit handler calls a mutation hook — not a service directly from the form component
+- Reset form on successful submit when appropriate
+
+## MMKV — Secure & Fast Persistence
+
+| Data | Storage |
+|------|---------|
+| Access token | MMKV (encrypted) |
+| Refresh token | MMKV (encrypted) |
+| Theme preference | MMKV |
+| Onboarding flag | MMKV |
+
+Read tokens synchronously on app boot — no loading flash for auth check.
+
+## Local Component State (`useState`)
+
+Use only for:
+
+- Text input before debounce (search field)
+- Modal open/close (component-scoped)
+- Animation state
+- Toggle that doesn't need to survive unmount
+
+If state is needed by siblings → lift to hook or Zustand. If it comes from API → React Query.
+
+## Decision Flowchart
+
+```
+Did it come from the server?
+  YES → React Query
+  NO → Is it a form field?
+    YES → React Hook Form
+    NO → Must it persist across app restarts?
+      YES → MMKV (+ optional Zustand for in-memory access)
+      NO → Zustand (if shared) or useState (if local)
+```
+
+## Anti-Patterns
+
+| Pattern | Correct approach |
+|---------|------------------|
+| `useEffect` to sync Query → Zustand | Read directly from query in component |
+| Global store for modal in one screen | `useState` in that screen |
+| RHF for non-form toggles | Zustand or local state |
+| Redux | Not used in FleetLink |
+| Context for server data | React Query |

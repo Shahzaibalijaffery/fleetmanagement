@@ -1,0 +1,229 @@
+---
+description: FleetLink Node.js backend standards — simple, organized, readable Express code (mandatory)
+globs: server/**/*.ts
+alwaysApply: false
+---
+
+# FleetLink Node.js Backend Standards (Mandatory)
+
+## Philosophy
+
+The backend must be **organized, readable, and boring**. Every file has one clear job. No clever patterns. No over-engineering. A new developer should trace any request from route to database in under 60 seconds.
+
+## Non-Negotiable Principles
+
+1. **Readability first** — Code is read 10x more than written. Optimize for the reader.
+2. **Flat and explicit** — Shallow folders, clear names, no indirection chains.
+3. **Simple over abstract** — No base classes, no generic repositories, no DI containers.
+4. **One layer, one responsibility** — Route → Controller → Service → Repository. Always.
+5. **Small files** — Split before files become hard to scan.
+6. **TypeScript strict** — Full typing on requests, responses, and DB documents.
+
+## Request Flow (Never Skip Steps)
+
+```
+HTTP Request
+  → Route        (method + path + middleware)
+  → Validation   (Zod/Joi schema — reject bad input early)
+  → Controller   (extract req data, call service, send res)
+  → Service      (business logic, orchestration)
+  → Repository   (Mongoose queries only)
+  → MongoDB
+```
+
+```typescript
+// ✅ Clear, traceable flow
+// trips.routes.ts
+router.get('/', authenticate, validate(listTripsSchema), tripController.list);
+
+// trips.controller.ts
+async list(req: Request, res: Response, next: NextFunction) {
+  try {
+    const result = await tripService.listTrips(req.query);
+    res.json({ data: result.trips, meta: result.meta });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// trips.service.ts
+async listTrips(query: ListTripsQuery) {
+  const { page, limit, status } = query;
+  return tripRepository.findPaginated({ status }, { page, limit });
+}
+
+// trips.repository.ts
+async findPaginated(filter: TripFilter, pagination: Pagination) {
+  const [data, total] = await Promise.all([
+    TripModel.find(filter).skip(...).limit(...).lean(),
+    TripModel.countDocuments(filter),
+  ]);
+  return { data, total };
+}
+```
+
+## Controller Rules
+
+- Thin — max ~15 lines per method
+- Extract data from `req` (params, body, query, user from auth middleware)
+- Call exactly one service method
+- Return standardized JSON response
+- Always `try/catch` with `next(error)` — no res.status in catch blocks
+- Never import Mongoose models directly
+
+## Service Rules
+
+- All business logic lives here
+- Orchestrate multiple repository calls when needed
+- Throw typed `AppError` subclasses — never raw `Error` with string messages
+- No `req`/`res` objects — pure functions of domain input → domain output
+- No HTTP status code knowledge
+
+```typescript
+// ✅ Business rule in service
+async acceptTrip(tripId: string, driverId: string) {
+  const trip = await tripRepository.findById(tripId);
+  if (!trip) throw new NotFoundError('Trip not found');
+  if (trip.status !== 'pending') throw new ConflictError('Trip already assigned');
+  if (trip.driverId) throw new ConflictError('Trip already has a driver');
+
+  return tripRepository.updateById(tripId, { driverId, status: 'accepted' });
+}
+```
+
+## Repository Rules
+
+- Mongoose queries only — no business decisions
+- Return plain objects (`lean()`) unless Mongoose document methods needed
+- One repository per model/domain
+- Method names describe the query: `findById`, `findByDriverId`, `create`, `updateById`, `deleteById`
+- No HTTP, no validation, no authorization (authorization is service or middleware)
+
+## Route Rules
+
+- Define method, path, middleware chain, controller handler
+- Group by feature: `features/trips/trips.routes.ts`
+- Mount in aggregator: `routes/index.ts` → `/api/v1/trips`
+- No logic in route files — not even simple conditionals
+
+## Validation Layer (Required)
+
+```typescript
+// trips.validation.ts
+export const createTripSchema = z.object({
+  body: z.object({
+    pickup: z.string().min(1),
+    dropoff: z.string().min(1),
+    fleetId: z.string().uuid(),
+  }),
+});
+
+// middleware/validate.ts — reusable validator middleware
+export const validate = (schema: ZodSchema) => (req, res, next) => {
+  const result = schema.safeParse({ body: req.body, query: req.query, params: req.params });
+  if (!result.success) throw new ValidationError(result.error);
+  next();
+};
+```
+
+- Validate at the edge — before controller
+- Reject with 400 and clear field-level messages
+- Never trust client input
+
+## Error Handling (Centralized)
+
+```typescript
+// middleware/errorHandler.ts
+export function errorHandler(err: Error, _req: Request, res: Response, _next: NextFunction) {
+  if (err instanceof AppError) {
+    return res.status(err.statusCode).json({ error: { code: err.code, message: err.message } });
+  }
+  logger.error(err);
+  return res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' } });
+}
+```
+
+- Custom errors: `AppError`, `NotFoundError`, `ValidationError`, `UnauthorizedError`, `ForbiddenError`, `ConflictError`
+- Controllers never set status codes for errors — throw typed errors
+- Never expose stack traces in production responses
+
+## Middleware
+
+| Middleware | Purpose |
+|------------|---------|
+| `authenticate` | Verify JWT, attach `req.user` |
+| `authorize(roles)` | Check user role |
+| `validate(schema)` | Input validation |
+| `errorHandler` | Centralized error formatting |
+| `rateLimiter` | Protect auth and sensitive endpoints |
+
+Keep middleware generic. Feature-specific checks go in services.
+
+## Async Pattern
+
+```typescript
+// ✅ Always async/await — no callback hell, no .then() chains in controllers
+async function getTrip(req: Request, res: Response, next: NextFunction) {
+  try {
+    const trip = await tripService.getTrip(req.params.id);
+    res.json({ data: trip });
+  } catch (error) {
+    next(error);
+  }
+}
+```
+
+## Environment & Config
+
+- All config from `config/env.ts` validated with Zod at startup
+- No `process.env` scattered through the codebase
+- Fail fast on missing required env vars
+
+## Logging
+
+- Structured logging (pino or winston)
+- Log: request ID, method, path, status, duration
+- Never log passwords, tokens, or PII
+
+## What NOT to Do (Mandatory Rejections)
+
+| Forbidden | Why |
+|-----------|-----|
+| Business logic in routes | Untestable, untraceable |
+| Mongoose calls in controllers | Breaks layer separation |
+| Business logic in models | Hidden side effects |
+| God service with 50 methods | Split by sub-domain |
+| Abstract `BaseRepository<T>` | Over-engineering for MongoDB |
+| Factory pattern for services | Unnecessary indirection |
+| Dependency injection framework | Manual imports are fine at this scale |
+| `any` type on request/response | Breaks type safety |
+| Raw `res.status(404).json(...)` in services | Services don't know HTTP |
+| Multiple concerns in one file | Split it |
+
+## File Naming
+
+```
+trips.controller.ts
+trips.service.ts
+trips.repository.ts
+trips.routes.ts
+trips.validation.ts
+trips.types.ts
+```
+
+## Testing Mindset
+
+Write services and repositories so they are testable without HTTP:
+
+- Service: mock repository, test business rules
+- Repository: test against test DB or mock Mongoose
+- Controller: test with supertest (integration)
+
+## Readability Checklist (Before Merging)
+
+- [ ] Can I trace this request in 4 files or fewer?
+- [ ] Is every function under 25 lines?
+- [ ] Is there zero business logic outside services?
+- [ ] Are all inputs validated before the controller?
+- [ ] Are errors typed and handled centrally?
+- [ ] Would a junior developer understand this without explanation?

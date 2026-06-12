@@ -1,0 +1,130 @@
+---
+description: FleetLink security standards — JWT, refresh tokens, validation, and secure storage
+alwaysApply: true
+---
+
+# FleetLink Security Standards
+
+## Authentication Flow
+
+```
+Login → Server validates credentials → Returns access token (short-lived) + refresh token (long-lived)
+API calls → Access token in Authorization header
+Access expired → Client refreshes using refresh token → New access token
+Refresh expired → Force logout, redirect to login
+```
+
+### Token Configuration
+
+| Token | Lifetime | Storage (Mobile) | Storage (Server) |
+|-------|----------|------------------|------------------|
+| Access | 15 minutes | MMKV (encrypted) | N/A (stateless JWT) |
+| Refresh | 7 days | MMKV (encrypted) | Hashed in DB |
+
+- Access token: JWT with `userId`, `role`, `exp`
+- Refresh token: opaque random string, hashed with bcrypt before DB storage
+- Rotate refresh token on each use (invalidate old, issue new)
+
+## Password Security
+
+```typescript
+// Hash on registration/password change
+const hashed = await bcrypt.hash(password, 12);
+
+// Verify on login
+const isValid = await bcrypt.compare(password, user.password);
+```
+
+- bcrypt cost factor: 12
+- Never log, return, or store plain-text passwords
+- Minimum password requirements enforced in validation schema (8+ chars, complexity)
+
+## JWT Middleware (Server)
+
+```typescript
+export async function authenticate(req: Request, _res: Response, next: NextFunction) {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) throw new UnauthorizedError('No token provided');
+
+  const payload = verifyAccessToken(token);
+  req.user = await userRepository.findById(payload.userId);
+  if (!req.user) throw new UnauthorizedError('User not found');
+
+  next();
+}
+```
+
+- Verify signature, expiration, and issuer
+- Attach `req.user` — never trust client-sent user ID in body
+- Role checks via `authorize('driver', 'owner')` middleware
+
+## Input Validation & Sanitization
+
+- **Validate everything** at the API boundary with Zod/Joi
+- **Sanitize strings**: `trim()`, reject HTML/script in text fields
+- **Whitelist** allowed fields in update operations — never spread `req.body` directly into DB update
+- **Parameterize** all queries — Mongoose handles this; never build raw query strings
+
+```typescript
+// ❌ BAD — mass assignment
+await UserModel.findByIdAndUpdate(id, req.body);
+
+// ✅ GOOD — explicit allowed fields
+const { name, phone } = req.body;
+await userRepository.updateById(id, { name, phone });
+```
+
+## Mobile Secure Storage
+
+| Data | Storage | Never use |
+|------|---------|-----------|
+| Access token | MMKV encrypted | AsyncStorage |
+| Refresh token | MMKV encrypted | AsyncStorage |
+| User preferences | MMKV | — |
+| Passwords | Never stored locally | Any storage |
+
+- Clear all tokens on logout
+- Axios interceptor handles token refresh transparently
+
+## Authorization (Server)
+
+- Check ownership in **service layer**: driver can only see their trips, owner only their fleet
+- Never rely on client-side role checks alone
+- Return 403 Forbidden — not 404 — when resource exists but user lacks access (unless hiding existence is required)
+
+```typescript
+async getTrip(tripId: string, userId: string, role: Role) {
+  const trip = await tripRepository.findById(tripId);
+  if (!trip) throw new NotFoundError('Trip not found');
+
+  if (role === 'driver' && trip.driverId !== userId) {
+    throw new ForbiddenError('Access denied');
+  }
+  return trip;
+}
+```
+
+## HTTP Security
+
+- CORS: whitelist known origins only
+- Rate limit auth endpoints (login, register, refresh)
+- Helmet.js for security headers
+- No sensitive data in URL query params (tokens, passwords)
+- HTTPS only in production
+
+## Error Responses
+
+- Never expose stack traces, DB errors, or internal paths
+- Generic message for 500: "Something went wrong"
+- Specific messages for 400/401/403/404/409 are acceptable
+
+## Anti-Patterns
+
+| Pattern | Risk |
+|---------|------|
+| JWT in AsyncStorage | Token theft via device compromise |
+| Long-lived access tokens (24h+) | Extended attack window |
+| No refresh token rotation | Stolen refresh token valid indefinitely |
+| `req.body` spread into DB update | Mass assignment vulnerability |
+| Client-only auth checks | Trivial bypass |
+| Logging request bodies with passwords | Credential leak in logs |

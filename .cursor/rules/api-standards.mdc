@@ -1,0 +1,158 @@
+---
+description: FleetLink API standards — Axios, React Query, caching, and server HTTP conventions
+globs: "{mobile/**/*.{ts,tsx},server/**/*.ts}"
+alwaysApply: false
+---
+
+# FleetLink API Standards
+
+## Layer Separation (Mobile)
+
+```
+Screen → Hook (useQuery/useMutation) → Service (Axios) → Backend
+```
+
+**Never call Axios or fetch directly inside a component or screen.**
+
+## Axios Client (`shared/api/client.ts`)
+
+- Single configured Axios instance
+- Base URL from environment config
+- Request interceptor: attach JWT access token from MMKV
+- Response interceptor: on 401 → attempt refresh token flow → retry or logout
+- All services import this client — no raw `axios.create()` in features
+
+```typescript
+// features/trips/services/trip.service.ts
+export const tripService = {
+  getTrips: (params: TripListParams) =>
+    apiClient.get<TripListResponse>('/trips', { params }).then((r) => r.data),
+
+  acceptTrip: (tripId: string) =>
+    apiClient.post<Trip>(`/trips/${tripId}/accept`).then((r) => r.data),
+};
+```
+
+## React Query (Required for Server State)
+
+### Query Keys
+
+```typescript
+export const tripKeys = {
+  all: ['trips'] as const,
+  lists: () => [...tripKeys.all, 'list'] as const,
+  list: (filters: TripFilters) => [...tripKeys.lists(), filters] as const,
+  detail: (id: string) => [...tripKeys.all, 'detail', id] as const,
+};
+```
+
+- Hierarchical, typed query keys per feature
+- Colocate keys with the feature hook file
+
+### Hooks Pattern
+
+```typescript
+// features/trips/hooks/useTrips.ts
+export function useTrips(filters: TripFilters) {
+  return useQuery({
+    queryKey: tripKeys.list(filters),
+    queryFn: () => tripService.getTrips(filters),
+    staleTime: 2 * 60 * 1000,
+  });
+}
+```
+
+### Mutations
+
+```typescript
+export function useAcceptTrip() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: tripService.acceptTrip,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tripKeys.lists() });
+    },
+  });
+}
+```
+
+### Required Behaviors
+
+| Behavior | Implementation |
+|----------|----------------|
+| Caching | `staleTime` + `gcTime` per query type |
+| Invalidation | `invalidateQueries` on mutation success |
+| Background refresh | `refetchOnMount`, `refetchOnReconnect` |
+| Optimistic updates | `onMutate` + `onError` rollback for toggles |
+| Debounced search | `useDebouncedValue` + query key includes debounced term |
+| Cancellation | React Query auto-cancels; pass `signal` in service for long requests |
+| Pagination | `useInfiniteQuery` with `getNextPageParam` |
+| Retry | `retry: 2` for queries, `retry: 0` for mutations |
+
+## Server HTTP Conventions
+
+### Response Shape
+
+```typescript
+// Success
+{ "data": T, "message"?: string }
+
+// Paginated
+{ "data": T[], "meta": { "page": 1, "limit": 20, "total": 150, "totalPages": 8 } }
+
+// Error
+{ "error": { "code": "TRIP_NOT_FOUND", "message": "Trip not found" } }
+```
+
+### Status Codes
+
+| Code | Use |
+|------|-----|
+| 200 | Success (GET, PATCH) |
+| 201 | Created (POST) |
+| 204 | Deleted (DELETE) |
+| 400 | Validation error |
+| 401 | Unauthenticated |
+| 403 | Forbidden |
+| 404 | Not found |
+| 409 | Conflict (duplicate) |
+| 500 | Internal error (never expose stack) |
+
+### Route Naming
+
+- Plural nouns: `/trips`, `/drivers`, `/fleet`
+- Nested resources: `/fleet/:fleetId/drivers`
+- Actions as sub-resources: `POST /trips/:id/accept` (not `/acceptTrip`)
+- Version prefix: `/api/v1/...`
+
+## Error Handling (Mobile)
+
+```typescript
+export function getErrorMessage(error: unknown): string {
+  if (axios.isAxiosError(error)) {
+    return error.response?.data?.error?.message ?? 'Something went wrong';
+  }
+  return 'Something went wrong';
+}
+```
+
+## Debounced Search Pattern
+
+```typescript
+const [search, setSearch] = useState('');
+const debouncedSearch = useDebouncedValue(search, 300);
+
+const { data } = useTrips({ search: debouncedSearch });
+```
+
+## Anti-Patterns
+
+| Pattern | Fix |
+|---------|-----|
+| `useEffect` + `fetch` | React Query hook |
+| API call in `onPress` inline | Mutation hook |
+| Storing API response in Zustand | React Query cache |
+| Invalidating all queries on every mutation | Targeted `queryKey` |
+| No typed request/response | Feature `types/` interfaces |
+| `GET` with request body | Query params |

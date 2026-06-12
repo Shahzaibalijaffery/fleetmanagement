@@ -1,0 +1,193 @@
+---
+description: FleetLink UI standards — reusable components, theme tokens, and spacing system
+globs: mobile/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# FleetLink UI Standards
+
+## Design System Location
+
+```
+mobile/src/shared/
+├── components/
+│   ├── Button/
+│   ├── Input/
+│   ├── Card/
+│   ├── Modal/
+│   └── loading/
+│       ├── Skeleton.tsx
+│       ├── Shimmer.tsx
+│       ├── EmptyState.tsx
+│       └── ErrorState.tsx
+└── theme/
+    ├── colors.ts
+    ├── spacing.ts
+    ├── typography.ts
+    ├── radius.ts
+    └── index.ts
+```
+
+All UI must use these shared primitives. Do not create one-off buttons or inputs in feature folders.
+
+## Required Reusable Components
+
+### Button
+
+```tsx
+<Button
+  title="Accept Trip"
+  onPress={handleAccept}
+  variant="primary"       // primary | secondary | outline | danger | ghost
+  size="md"               // sm | md | lg
+  loading={isPending}
+  disabled={!canAccept}
+/>
+```
+
+- Handles loading spinner inside button
+- Disabled state styled consistently
+- Min touch target 44x44
+
+### Input
+
+```tsx
+<Input
+  label="Email"
+  value={value}
+  onChangeText={onChange}
+  error={errors.email?.message}
+  keyboardType="email-address"
+  autoCapitalize="none"
+/>
+```
+
+- Integrates with React Hook Form via `Controller`
+- Error text below field
+- Label always visible (no placeholder-only labels)
+
+### Card
+
+```tsx
+<Card padding="md" onPress={onPress}>
+  <Text style={styles.title}>{trip.pickup}</Text>
+</Card>
+```
+
+- Consistent shadow, radius, background from theme
+- Optional `onPress` for tappable cards
+
+### Modal
+
+```tsx
+<Modal
+  visible={isOpen}
+  onClose={onClose}
+  title="Confirm Action"
+>
+  <Text>Are you sure?</Text>
+  <Button title="Confirm" onPress={onConfirm} />
+</Modal>
+```
+
+- Backdrop dismiss, consistent animation
+- Title + close button in header
+
+## Theme Tokens Only
+
+```typescript
+// spacing.ts
+export const spacing = {
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
+  xxl: 48,
+} as const;
+
+// colors.ts — light and dark
+export const lightColors = {
+  primary: '#2563EB',
+  background: '#F8FAFC',
+  surface: '#FFFFFF',
+  textPrimary: '#0F172A',
+  textSecondary: '#64748B',
+  error: '#DC2626',
+  success: '#16A34A',
+  border: '#E2E8F0',
+};
+
+export const darkColors = {
+  primary: '#3B82F6',
+  background: '#0F172A',
+  surface: '#1E293B',
+  textPrimary: '#F8FAFC',
+  textSecondary: '#94A3B8',
+  error: '#EF4444',
+  success: '#22C55E',
+  border: '#334155',
+};
+```
+
+**Never use raw hex values in components.** Import from theme.
+
+## Spacing System
+
+| Token | Value | Use |
+|-------|-------|-----|
+| `xs` | 4 | Icon gaps, tight padding |
+| `sm` | 8 | Between related elements |
+| `md` | 16 | Card padding, section gaps |
+| `lg` | 24 | Screen padding, section margins |
+| `xl` | 32 | Large section breaks |
+| `xxl` | 48 | Hero spacing |
+
+Screen horizontal padding: `spacing.lg` (24px) standard.
+
+## Typography
+
+| Token | Size | Weight | Use |
+|-------|------|--------|-----|
+| `heading1` | 28 | 700 | Screen titles |
+| `heading2` | 22 | 600 | Section titles |
+| `heading3` | 18 | 600 | Card titles |
+| `body` | 16 | 400 | Primary text |
+| `bodySmall` | 14 | 400 | Secondary text |
+| `caption` | 12 | 400 | Labels, metadata |
+| `label` | 14 | 500 | Form labels, buttons |
+
+## Component Creation Rules
+
+Before creating a new UI component, check:
+
+1. Does `Button`, `Input`, `Card`, or `Modal` cover this with props/variants?
+2. Is this used in 2+ places? → `shared/components/`
+3. Is this domain-specific? → `features/{name}/components/` but still use theme tokens
+
+## Dark Mode
+
+- Every component must work in light and dark mode
+- Use `useTheme().colors` — never hardcode
+- Test both modes before considering UI complete
+- Elevation/shadows may differ between modes
+
+## Consistency Checklist
+
+- [ ] Uses shared Button/Input/Card/Modal
+- [ ] Colors from theme tokens
+- [ ] Spacing from spacing tokens
+- [ ] Typography from typography tokens
+- [ ] Works in light and dark mode
+- [ ] Loading/empty/error states use shared components
+- [ ] Touch targets ≥ 44x44
+
+## Anti-Patterns
+
+| Pattern | Fix |
+|---------|-----|
+| Custom button in feature folder | Extend shared `Button` variant |
+| `marginTop: 13` | `spacing.md` or `spacing.sm` |
+| `fontSize: 17` | `typography.body` |
+| Different card styles per screen | Shared `Card` component |
+| Hardcoded white background | `colors.surface` |

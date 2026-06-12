@@ -1,0 +1,106 @@
+---
+description: Mandatory pre-implementation workflow — read all rules, validate compliance, refuse violations
+alwaysApply: true
+---
+
+# FleetLink Implementation Workflow (Mandatory)
+
+**This workflow applies to every feature, task, screen, component, API, model, service, hook, navigation flow, and backend module — without exception.**
+
+## Required Steps Before Writing Code
+
+### 1. Read All Rules
+
+Read every file in `.cursor/rules/` before planning or implementing:
+
+| Rule File | Purpose |
+|-----------|---------|
+| `fleetlink-master.mdc` | Project identity, stack, forbidden patterns |
+| `implementation-workflow.mdc` | This workflow |
+| `review-checklist.mdc` | Pre-implementation review checklist |
+| `coding-standards.mdc` | Simplicity, TypeScript, readability |
+| `architecture-standards.mdc` | Feature structure, layer separation |
+| `performance-standards.mdc` | Rendering, FlashList, pagination |
+| `loading-state-standards.mdc` | Skeleton, empty, error, success UX |
+| `api-standards.mdc` | Axios, React Query, HTTP conventions |
+| `state-management.mdc` | Zustand vs React Query vs RHF |
+| `react-native-standards.mdc` | Components, styles, theme, navigation |
+| `nodejs-backend-standards.mdc` | Express layers, readable backend code |
+| `database-standards.mdc` | Mongoose, indexes, repositories |
+| `security-standards.mdc` | JWT, validation, secure storage |
+| `ui-standards.mdc` | Shared components, theme tokens |
+
+Also read any scoped rules matching the files being changed (check `globs` in frontmatter).
+
+### 2. Validate Compliance
+
+Before generating code, verify the planned solution against every applicable rule. Complete `review-checklist.mdc` explicitly.
+
+### 3. Refuse Violations
+
+**Do not generate code that violates any FleetLink rule.** If the user's request conflicts with the rules:
+
+- Explain which rule(s) would be violated
+- Propose a compliant alternative
+- Do not ship a non-compliant shortcut unless the user explicitly overrides after understanding the tradeoff
+
+### 4. State Applied Rules
+
+At the start of every implementation response, include a brief **Rules Applied** section:
+
+```
+## Rules Applied
+- architecture-standards: [how it applies]
+- loading-state-standards: [skeleton/empty/error/success plan]
+- api-standards: [React Query + service layer]
+- [other relevant rules]
+```
+
+List only rules relevant to the current task — but confirm all rules were read.
+
+### 5. Refactor Before Presenting
+
+If generated code conflicts with any rule during implementation:
+
+- Refactor immediately — do not present non-compliant code
+- Re-check against the checklist before finishing
+- Split oversized files, remove inline styles, add missing loading states, fix layer violations, etc.
+
+## Scope Triggers
+
+This workflow activates for any work involving:
+
+- Screens, components, hooks, navigation
+- API endpoints, services, repositories, controllers, routes
+- Mongoose models, schemas, indexes
+- Zustand stores, React Query hooks, forms
+- UI primitives, theme, loading states
+- Auth, security, validation
+
+## Compliance Output Template
+
+Use this at the start of implementation work:
+
+```
+## Rules Applied
+- [rule-name]: [brief application note]
+
+## Review
+Architecture: [layer + folder]
+Performance: [list/memo/pagination notes]
+Loading states: [skeleton / empty / error / success]
+Types: [key types]
+State: [React Query / Zustand / RHF assignment]
+Security: [if applicable]
+```
+
+## Hard Stops — Never Generate
+
+- API calls inside UI components
+- Blank screens or spinner-only loading
+- Inline styles in React Native
+- Business logic in Mongoose models or route files
+- `any` types without documented justification
+- Code that skips Route → Controller → Service → Repository on the server
+- Server data stored in Zustand
+- Solutions that violate `nodejs-backend-standards.mdc` simplicity requirements

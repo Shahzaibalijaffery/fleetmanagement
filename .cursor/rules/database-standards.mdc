@@ -1,0 +1,163 @@
+---
+description: FleetLink database standards — Mongoose schemas, indexes, and repository pattern
+globs: server/**/*.ts
+alwaysApply: false
+---
+
+# FleetLink Database Standards
+
+## Philosophy
+
+Models define **data shape only**. Business logic lives in services. Data access lives in repositories.
+
+## Mongoose Schema Rules
+
+```typescript
+// models/trip.model.ts
+const tripSchema = new Schema(
+  {
+    pickup: { type: String, required: true, trim: true },
+    dropoff: { type: String, required: true, trim: true },
+    status: { type: String, enum: TRIP_STATUSES, required: true, default: 'pending' },
+    driverId: { type: Schema.Types.ObjectId, ref: 'Driver', default: null },
+    fleetId: { type: Schema.Types.ObjectId, ref: 'Fleet', required: true, index: true },
+    fare: { type: Number, required: true, min: 0 },
+  },
+  {
+    timestamps: true,  // createdAt, updatedAt — always enabled
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
+);
+```
+
+### Required on Every Schema
+
+- `timestamps: true`
+- `trim: true` on strings
+- `enum` for status/type fields
+- `ref` for ObjectId relations
+- Explicit `required` / `default` — no implicit optionality
+
+### Forbidden in Models
+
+- Business logic (`pre('save')` that calculates fares, assigns drivers)
+- API calls or service imports
+- Complex validation beyond shape (use Zod in validation layer)
+- `pre('save')` hooks that mutate business state — only acceptable for hashing passwords
+
+```typescript
+// ✅ Acceptable model hook — data transformation only
+userSchema.pre('save', async function () {
+  if (this.isModified('password')) {
+    this.password = await bcrypt.hash(this.password, 12);
+  }
+});
+
+// ❌ Forbidden — business logic in model
+tripSchema.pre('save', async function () {
+  if (this.status === 'accepted') {
+    await notifyDriver(this.driverId);  // NO
+  }
+});
+```
+
+## Indexing Strategy
+
+Define indexes explicitly in schema or migration scripts:
+
+```typescript
+tripSchema.index({ fleetId: 1, status: 1, createdAt: -1 });
+tripSchema.index({ driverId: 1, status: 1 });
+userSchema.index({ email: 1 }, { unique: true });
+```
+
+### Index Rules
+
+- Index every field used in `find`, `sort`, or `filter` queries
+- Compound indexes: equality fields first, sort field last
+- Unique indexes for natural keys (email, phone)
+- Review indexes when adding new query patterns in repositories
+- Do not over-index — each index has write cost
+
+## Repository Pattern (Required)
+
+```typescript
+// features/trips/trips.repository.ts
+export const tripRepository = {
+  findById: (id: string) => TripModel.findById(id).lean(),
+
+  findPaginated: async (filter: TripFilter, { page, limit }: Pagination) => {
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+      TripModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      TripModel.countDocuments(filter),
+    ]);
+    return { data, total };
+  },
+
+  create: (data: CreateTripInput) => TripModel.create(data),
+
+  updateById: (id: string, data: UpdateTripInput) =>
+    TripModel.findByIdAndUpdate(id, data, { new: true }).lean(),
+};
+```
+
+- One repository per domain model
+- Return `lean()` plain objects by default
+- Accept typed filter/input objects — not raw `any`
+- No business logic — just queries
+
+## Pagination (Standard)
+
+```typescript
+interface Pagination {
+  page: number;   // 1-based
+  limit: number;  // default 20, max 100
+}
+
+interface PaginatedResult<T> {
+  data: T[];
+  meta: { page: number; limit: number; total: number; totalPages: number };
+}
+```
+
+All list endpoints paginate. No unbounded `find()`.
+
+## Data Types
+
+- Use `ObjectId` for references — not string IDs stored as strings
+- Use `Decimal128` or store cents as integers for money — never floating point for currency
+- Store dates as `Date` — not ISO strings
+- Use enums (TypeScript + Mongoose) for status fields
+
+## Connection
+
+```typescript
+// config/database.ts
+export async function connectDatabase() {
+  await mongoose.connect(env.MONGODB_URI);
+  logger.info('MongoDB connected');
+}
+```
+
+- Single connection at startup
+- Handle `disconnected` and `error` events
+- Graceful shutdown on SIGTERM
+
+## Migrations & Seeds
+
+- Schema changes documented
+- Seed scripts in `scripts/seed/` for development data
+- No manual DB edits in production — use migration scripts
+
+## Anti-Patterns
+
+| Pattern | Fix |
+|---------|-----|
+| `TripModel.find()` in controller | Repository method |
+| Business rule in `pre('save')` | Service method |
+| No indexes on queried fields | Add compound index |
+| Returning Mongoose documents to client | `.lean()` + DTO mapping |
+| Storing passwords unhashed | bcrypt in model pre-save or service |
+| `$where` or raw string queries | Typed `find` filters |

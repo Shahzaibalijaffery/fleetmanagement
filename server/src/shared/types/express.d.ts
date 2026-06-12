@@ -1,0 +1,17 @@
+import type { UserRole } from '../../features/auth/auth.types';
+
+declare global {
+  namespace Express {
+    interface UserPayload {
+      id: string;
+      email: string;
+      role: UserRole;
+    }
+
+    interface Request {
+      user?: UserPayload;
+    }
+  }
+}
+
+export {};

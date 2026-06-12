@@ -1,0 +1,132 @@
+---
+description: FleetLink coding standards — simplicity, readability, TypeScript, and maintainability
+alwaysApply: true
+---
+
+# FleetLink Coding Standards
+
+## Philosophy
+
+Write code a teammate can understand in 30 seconds. Prefer boring, correct solutions over clever ones.
+
+## Simplicity Rules
+
+1. **One function, one job** — Functions do one thing. If you need "and" to describe it, split it.
+2. **No abstraction until the second use** — Do not create helpers, base classes, or generic wrappers for single-use code.
+3. **Flat over nested** — Max 2–3 levels of nesting. Use early returns and guard clauses.
+4. **Explicit over implicit** — No magic strings, hidden side effects, or surprise mutations.
+5. **Delete dead code** — No commented-out blocks, unused imports, or orphaned files.
+
+## TypeScript Standards
+
+```typescript
+// ❌ BAD
+const data: any = await fetchTrips();
+const user = response as User;
+
+// ✅ GOOD
+const data: Trip[] = await tripService.getTrips();
+if (!isUser(response)) throw new ValidationError('Invalid user payload');
+```
+
+- Enable `strict` mode. Never disable it locally.
+- Define interfaces/types in `types/` — co-locate with feature when feature-specific.
+- Use `unknown` + type guards instead of `any`.
+- Prefer `interface` for object shapes; `type` for unions and utility types.
+- Export types alongside the modules that use them.
+- Use `const` assertions and `as const` for literal unions when appropriate.
+
+## Function & File Size
+
+| Guideline | Limit |
+|-----------|-------|
+| Function body | ≤ 25 lines ideal, 40 max |
+| Component file | ≤ 150 lines |
+| Service/repository | ≤ 120 lines |
+
+Extract when a file grows. Never pad files with comments to justify length.
+
+## Naming
+
+- **Variables**: describe what they hold — `isOnline`, `tripList`, `hasError`
+- **Booleans**: prefix with `is`, `has`, `can`, `should`
+- **Event handlers**: `handle` + action — `handleSubmit`, `handleTripPress`
+- **Async functions**: verb-first — `fetchTrips`, `createBooking`, `validateToken`
+- **Avoid**: `data`, `info`, `temp`, `obj`, `item` (unless in a tight loop scope)
+
+## Comments
+
+- Code should be self-documenting through naming.
+- Comment **why**, not **what**.
+- No TODO comments in committed code — create a task or fix it.
+
+```typescript
+// ❌ BAD — states the obvious
+// increment counter
+setCount(count + 1);
+
+// ✅ GOOD — explains non-obvious business rule
+// Fleet owners can only assign drivers within their own organization
+if (driver.orgId !== owner.orgId) throw new ForbiddenError();
+```
+
+## Error Handling
+
+```typescript
+// Mobile — surface user-friendly messages, log details
+try {
+  await mutation.mutateAsync(payload);
+} catch (error) {
+  const message = getErrorMessage(error);
+  showToast(message);
+}
+
+// Server — throw typed errors, let middleware format response
+throw new NotFoundError('Trip not found');
+```
+
+- Never swallow errors silently.
+- Use custom error classes on the server (`AppError`, `NotFoundError`, `ValidationError`).
+- Map HTTP status codes consistently.
+
+## Imports
+
+Order (blank line between groups):
+
+1. External packages
+2. Internal absolute imports (`@/`)
+3. Relative imports
+4. Types (if separate `import type`)
+
+```typescript
+import { useQuery } from '@tanstack/react-query';
+
+import { tripService } from '@/features/trips/services/trip.service';
+
+import { TripCard } from './TripCard';
+import type { Trip } from './types';
+```
+
+## DRY — With Restraint
+
+- Duplicate twice before abstracting.
+- Shared code lives in `shared/` or `components/` only when used by 2+ features.
+- Do not create a `utils/` dumping ground — place utilities near their domain.
+
+## Git & Change Discipline
+
+- One concern per commit when possible.
+- Do not refactor unrelated code in the same change.
+- Do not add dependencies without justification.
+- Match existing code style in the file you edit.
+
+## Anti-Patterns (Reject on Review)
+
+| Anti-pattern | Fix |
+|--------------|-----|
+| God component doing fetch + form + navigation | Split into hook + presentational component |
+| Utility function used once | Inline the logic |
+| Generic `BaseService<T>` | Concrete service per domain |
+| Deep inheritance chains | Composition |
+| Config objects with 20+ optional fields | Required fields + sensible defaults |
+| `// @ts-ignore` | Fix the type or add a proper guard |

@@ -1,0 +1,44 @@
+# Mobile — see root .gitignore for full list
+node_modules/
+.env
+.env.*
+!.env.example
+
+# Native build outputs (source folders ios/ & android/ are tracked)
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/.cxx/
+
+ios/build/
+ios/Pods/
+ios/DerivedData/
+ios/.xcode.env.local
+ios/**/*.xcuserstate
+ios/**/xcuserdata/
+
+# Metro / RN
+.metro-health-check*
+
+# Expo leftovers
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Debug & OS
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.DS_Store
+*.tsbuildinfo
+
+# Signing keys (never commit)
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.keystore
+*.pem
