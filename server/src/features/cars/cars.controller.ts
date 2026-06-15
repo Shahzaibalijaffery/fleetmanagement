@@ -8,6 +8,7 @@ import type {
   CreateCarInput,
   UpdateCarInput,
   UpdatePersonalMaintenanceInput,
+  UpdatePersonalMaintenanceItemInput,
   UpdatePersonalOdometerInput,
 } from './cars.types';
 
@@ -90,13 +91,30 @@ export const carsController = {
     }
   },
 
+  async updatePersonalMaintenanceItem(req: Request, res: Response, next: NextFunction) {
+    try {
+      const car = await carsService.updatePersonalMaintenanceItem(
+        req.user!.id,
+        String(req.params.carId),
+        String(req.params.itemId),
+        req.body as UpdatePersonalMaintenanceItemInput,
+      );
+      res.json({ data: car });
+    } catch (error) {
+      next(error);
+    }
+  },
+
   async completePersonalMaintenanceItem(req: Request, res: Response, next: NextFunction) {
     try {
       const car = await carsService.completePersonalMaintenanceItem(
         req.user!.id,
         String(req.params.carId),
         String(req.params.itemId),
-        req.body.personalCurrentOdometerKm as number | undefined,
+        {
+          cost: req.body.cost as number,
+          personalCurrentOdometerKm: req.body.personalCurrentOdometerKm as number | undefined,
+        },
       );
       res.json({ data: car });
     } catch (error) {

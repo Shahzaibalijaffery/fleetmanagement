@@ -5,7 +5,7 @@ import { useThemedStyles } from '@/shared/hooks/useThemedStyles';
 
 import type { CarExpenseLog } from '../types/car-expenses.types';
 import { formatExpenseDate } from '../utils/formatExpenseDate';
-import { formatMoney } from '../utils/formatMoney';
+import { formatMoney } from '@/shared/utils/formatMoney';
 import { createStyles } from './CarExpenseLogCard.styles';
 
 interface CarExpenseLogCardProps {

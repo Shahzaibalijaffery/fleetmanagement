@@ -1,5 +1,7 @@
 import type { LinkingOptions } from '@react-navigation/native';
 
+import type { CarStatus } from '@/features/cars/types/cars.types';
+
 import type { RootStackParamList } from './types';
 
 export const linking: LinkingOptions<RootStackParamList> = {
@@ -18,7 +20,12 @@ export const linking: LinkingOptions<RootStackParamList> = {
         screens: {
           Home: 'home',
           Profile: 'profile',
-          CarList: 'cars',
+          CarList: {
+            path: 'cars',
+            parse: {
+              status: (status: string) => status as CarStatus,
+            },
+          },
           CarDetail: 'cars/:carId',
           AddCar: 'cars/add',
           EditCar: 'cars/:carId/edit',
@@ -27,6 +34,9 @@ export const linking: LinkingOptions<RootStackParamList> = {
           Requests: 'requests',
           Assignments: 'assignments',
           Contracts: 'contracts',
+          AllExpenses: 'expenses',
+          AddExpense: 'expenses/add',
+          ExpenseDetail: 'expenses/:expenseId',
           ContractDetail: 'contracts/:contractId',
           CreateContract: 'contracts/create/:assignmentId',
           EditContract: 'contracts/:contractId/edit',

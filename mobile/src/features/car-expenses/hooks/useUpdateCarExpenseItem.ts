@@ -17,6 +17,7 @@ export function useUpdateCarExpenseItem(carId: string, logId: string) {
     }) => carExpensesService.updateExpenseItem(carId, logId, itemId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: carExpensesKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
     },
   });
 }

@@ -20,13 +20,19 @@ export function getOwnerQuickActionSections(navigation: MainNavigation): QuickAc
           id: 'cars',
           title: 'My cars',
           subtitle: 'View and manage your vehicles',
-          onPress: () => navigation.navigate('CarList'),
+          onPress: () => navigation.navigate('CarList', {}),
         },
         {
           id: 'assignments',
           title: 'Assignments',
           subtitle: 'Active driver pairings',
           onPress: () => navigation.navigate('Assignments'),
+        },
+        {
+          id: 'expenses',
+          title: 'All expenses',
+          subtitle: 'Track spending with optional car costs',
+          onPress: () => navigation.navigate('AllExpenses'),
         },
         {
           id: 'contracts',

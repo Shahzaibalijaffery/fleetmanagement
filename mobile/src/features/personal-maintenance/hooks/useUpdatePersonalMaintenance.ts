@@ -1,15 +1,15 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { carsKeys } from '@/features/cars/hooks/cars.keys';
-import { carsService } from '@/features/cars/services/cars.service';
-import type { UpdatePersonalMaintenanceRequest } from '@/features/cars/types/cars.types';
+
+import { personalMaintenanceService } from '../services/personal-maintenance.service';
 
 export function useUpdatePersonalMaintenance(carId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (payload: UpdatePersonalMaintenanceRequest) =>
-      carsService.updatePersonalMaintenance(carId, payload),
+    mutationFn: (payload: Parameters<typeof personalMaintenanceService.updatePersonalMaintenance>[1]) =>
+      personalMaintenanceService.updatePersonalMaintenance(carId, payload),
     onSuccess: (data) => {
       queryClient.setQueryData(carsKeys.detail(carId), data);
       queryClient.invalidateQueries({ queryKey: carsKeys.lists() });

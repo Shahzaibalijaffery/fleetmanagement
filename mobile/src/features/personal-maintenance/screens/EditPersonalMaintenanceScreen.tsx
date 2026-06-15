@@ -1,34 +1,34 @@
-import { useEffect } from 'react';
-import { useFieldArray, useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useEffect } from "react";
+import { useFieldArray, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
-import { AuthErrorBanner } from '@/features/auth/components/AuthErrorBanner';
-import { useCar } from '@/features/cars/hooks/useCar';
-import { CarDetailSkeleton } from '@/features/cars/components/CarDetailSkeleton';
-import type { MainStackParamList } from '@/app/navigation/types';
+import { AuthErrorBanner } from "@/features/auth/components/AuthErrorBanner";
+import { useCar } from "@/features/cars/hooks/useCar";
+import { CarDetailSkeleton } from "@/features/cars/components/CarDetailSkeleton";
+import type { MainStackParamList } from "@/app/navigation/types";
 import {
   AppStatusBar,
   Button,
   ErrorState,
   ScreenContainer,
   ScreenHeader,
-} from '@/shared/components';
-import { getErrorMessage } from '@/shared/utils/getErrorMessage';
+} from "@/shared/components";
+import { getErrorMessage } from "@/shared/utils/getErrorMessage";
 
-import { PersonalMaintenanceEditor } from '../components/PersonalMaintenanceEditor';
-import { useUpdatePersonalMaintenance } from '../hooks/useUpdatePersonalMaintenance';
+import { PersonalMaintenanceEditor } from "../components/PersonalMaintenanceEditor";
+import { useUpdatePersonalMaintenance } from "../hooks/useUpdatePersonalMaintenance";
 import {
   personalMaintenanceFormSchema,
   type PersonalMaintenanceFormValues,
-} from '../validation/personal-maintenance.schemas';
+} from "../validation/personal-maintenance.schemas";
 
 type EditPersonalMaintenanceScreenProps = NativeStackScreenProps<
   MainStackParamList,
-  'EditPersonalMaintenance'
+  "EditPersonalMaintenance"
 >;
 
-function mapChecklist(car: NonNullable<ReturnType<typeof useCar>['data']>) {
+function mapChecklist(car: NonNullable<ReturnType<typeof useCar>["data"]>) {
   return (car.personalMaintenanceChecklist ?? []).map((item) => ({
     title: item.title,
     scheduleType: item.scheduleType,
@@ -45,23 +45,22 @@ export function EditPersonalMaintenanceScreen({
   const { data, isLoading, isError, refetch } = useCar(carId);
   const updateMaintenance = useUpdatePersonalMaintenance(carId);
 
-  const { control, handleSubmit, reset } = useForm<PersonalMaintenanceFormValues>({
-    resolver: zodResolver(personalMaintenanceFormSchema),
-    defaultValues: {
-      personalInitialOdometerKm: 0,
-      personalMaintenanceChecklist: [],
-    },
-  });
+  const { control, handleSubmit, reset } =
+    useForm<PersonalMaintenanceFormValues>({
+      resolver: zodResolver(personalMaintenanceFormSchema),
+      defaultValues: {
+        personalMaintenanceChecklist: [],
+      },
+    });
 
   const { fields, append, replace, remove } = useFieldArray({
     control,
-    name: 'personalMaintenanceChecklist',
+    name: "personalMaintenanceChecklist",
   });
 
   useEffect(() => {
     if (data) {
       reset({
-        personalInitialOdometerKm: data.personalInitialOdometerKm ?? 0,
         personalMaintenanceChecklist: mapChecklist(data),
       });
     }
@@ -70,7 +69,6 @@ export function EditPersonalMaintenanceScreen({
   const onSubmit = (values: PersonalMaintenanceFormValues) => {
     updateMaintenance.mutate(
       {
-        personalInitialOdometerKm: values.personalInitialOdometerKm,
         personalMaintenanceChecklist: values.personalMaintenanceChecklist,
       },
       {

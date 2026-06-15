@@ -41,7 +41,7 @@ export function CarDetailScreen({ navigation, route }: CarDetailScreenProps) {
     deleteCar.mutate(carId, {
       onSuccess: () => {
         setShowDeleteModal(false);
-        navigation.navigate('CarList');
+        navigation.navigate('CarList', {});
       },
     });
   };

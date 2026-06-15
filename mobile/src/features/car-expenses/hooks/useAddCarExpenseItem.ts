@@ -12,6 +12,7 @@ export function useAddCarExpenseItem(carId: string, logId: string) {
       carExpensesService.addExpenseItem(carId, logId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: carExpensesKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
     },
   });
 }

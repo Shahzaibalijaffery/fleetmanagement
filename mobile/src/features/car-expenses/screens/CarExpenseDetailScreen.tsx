@@ -27,7 +27,7 @@ import { useDeleteCarExpenseItem } from '../hooks/useDeleteCarExpenseItem';
 import { useUpdateCarExpense } from '../hooks/useUpdateCarExpense';
 import { useUpdateCarExpenseItem } from '../hooks/useUpdateCarExpenseItem';
 import type { CarExpenseItem } from '../types/car-expenses.types';
-import { formatMoney } from '../utils/formatMoney';
+import { formatMoney } from '@/shared/utils/formatMoney';
 import { toDateInputValue } from '../utils/formatExpenseDate';
 import {
   addExpenseItemFormSchema,

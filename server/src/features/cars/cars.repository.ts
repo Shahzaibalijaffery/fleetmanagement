@@ -79,21 +79,14 @@ export const carsRepository = {
     return CarModel.findByIdAndDelete(carId).lean<CarDocument>();
   },
 
-  updatePersonalMaintenance(
-    carId: string,
-    checklist: MaintenanceChecklistItemInput[],
-    personalInitialOdometerKm?: number,
-  ) {
-    const update: Record<string, unknown> = {
-      personalMaintenanceChecklist: mapPersonalMaintenanceForSave(checklist),
-    };
-
-    if (personalInitialOdometerKm != null) {
-      update.personalInitialOdometerKm = personalInitialOdometerKm;
-      update.personalCurrentOdometerKm = personalInitialOdometerKm;
-    }
-
-    return CarModel.findByIdAndUpdate(carId, update, { new: true }).lean<CarDocument>();
+  updatePersonalMaintenance(carId: string, checklist: MaintenanceChecklistItemInput[]) {
+    return CarModel.findByIdAndUpdate(
+      carId,
+      {
+        personalMaintenanceChecklist: mapPersonalMaintenanceForSave(checklist),
+      },
+      { new: true },
+    ).lean<CarDocument>();
   },
 
   updatePersonalOdometer(carId: string, personalCurrentOdometerKm: number) {
@@ -132,6 +125,54 @@ export const carsRepository = {
           'personalMaintenanceChecklist.$.lastCompletedOdometerKm': personalCurrentOdometerKm,
         },
       },
+      { new: true },
+    ).lean<CarDocument>();
+  },
+
+  updatePersonalMaintenanceItem(
+    carId: string,
+    itemId: string,
+    data: {
+      scheduleType?: string;
+      frequency?: string | null;
+      mileageIntervalKm?: number | null;
+      lastCompletedAt?: Date | null;
+      lastCompletedOdometerKm?: number | null;
+    },
+  ) {
+    const $set: Record<string, unknown> = {};
+
+    if (data.scheduleType !== undefined) {
+      $set['personalMaintenanceChecklist.$.scheduleType'] = data.scheduleType;
+    }
+
+    if (data.frequency !== undefined) {
+      $set['personalMaintenanceChecklist.$.frequency'] = data.frequency;
+    }
+
+    if (data.mileageIntervalKm !== undefined) {
+      $set['personalMaintenanceChecklist.$.mileageIntervalKm'] = data.mileageIntervalKm;
+    }
+
+    if (data.lastCompletedAt !== undefined) {
+      $set['personalMaintenanceChecklist.$.lastCompletedAt'] = data.lastCompletedAt;
+    }
+
+    if (data.lastCompletedOdometerKm !== undefined) {
+      $set['personalMaintenanceChecklist.$.lastCompletedOdometerKm'] = data.lastCompletedOdometerKm;
+    }
+
+    if (data.scheduleType === 'mileage') {
+      $set['personalMaintenanceChecklist.$.frequency'] = null;
+    }
+
+    if (data.scheduleType === 'time') {
+      $set['personalMaintenanceChecklist.$.mileageIntervalKm'] = null;
+    }
+
+    return CarModel.findOneAndUpdate(
+      { _id: carId, 'personalMaintenanceChecklist._id': itemId },
+      { $set },
       { new: true },
     ).lean<CarDocument>();
   },

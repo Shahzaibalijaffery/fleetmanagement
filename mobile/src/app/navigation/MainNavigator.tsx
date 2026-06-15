@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { HomeScreen } from '@/app/screens/HomeScreen';
 import { AssignmentsScreen } from '@/features/assignments';
 import { AddCarExpenseScreen, CarExpenseDetailScreen } from '@/features/car-expenses';
+import { AllExpensesScreen, AddExpenseScreen, ExpenseDetailScreen } from '@/features/expenses';
 import { EditPersonalMaintenanceScreen } from '@/features/personal-maintenance';
 import {
   AddCarScreen,
@@ -35,6 +36,9 @@ export function MainNavigator() {
       <Stack.Screen name="EditCar" component={EditCarScreen} />
       <Stack.Screen name="AddCarExpense" component={AddCarExpenseScreen} />
       <Stack.Screen name="CarExpenseDetail" component={CarExpenseDetailScreen} />
+      <Stack.Screen name="AllExpenses" component={AllExpensesScreen} />
+      <Stack.Screen name="AddExpense" component={AddExpenseScreen} />
+      <Stack.Screen name="ExpenseDetail" component={ExpenseDetailScreen} />
       <Stack.Screen name="EditPersonalMaintenance" component={EditPersonalMaintenanceScreen} />
       <Stack.Screen name="AvailableCars" component={AvailableCarsScreen} />
       <Stack.Screen name="AvailableDrivers" component={AvailableDriversScreen} />

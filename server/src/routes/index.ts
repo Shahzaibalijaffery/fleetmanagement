@@ -5,6 +5,7 @@ import { authRoutes } from '../features/auth/auth.routes';
 import { carsRoutes } from '../features/cars/cars.routes';
 import { contractsRoutes } from '../features/contracts/contracts.routes';
 import { dashboardRoutes } from '../features/dashboard/dashboard.routes';
+import { expensesRoutes } from '../features/expenses/expenses.routes';
 import { marketplaceRoutes } from '../features/marketplace/marketplace.routes';
 import { profileRoutes } from '../features/profile/profile.routes';
 import { requestsRoutes } from '../features/requests/requests.routes';
@@ -23,6 +24,7 @@ router.use('/requests', requestsRoutes);
 router.use('/assignments', assignmentsRoutes);
 router.use('/contracts', contractsRoutes);
 router.use('/dashboard', dashboardRoutes);
+router.use('/expenses', expensesRoutes);
 // router.use('/trips', tripRoutes);
 
 export { router as apiRouter };

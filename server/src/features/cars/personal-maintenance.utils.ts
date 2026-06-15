@@ -7,6 +7,20 @@ import type {
   PersonalMaintenanceChecklistItemView,
 } from './cars.types';
 
+export function parseMaintenanceDate(value: Date | string): Date {
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value.slice(0, 10))) {
+    return new Date(`${value.slice(0, 10)}T12:00:00`);
+  }
+
+  return new Date(value);
+}
+
+function startOfLocalDay(date: Date): Date {
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized;
+}
+
 function resolveTimeItemStatus(
   car: CarDocument,
   item: PersonalMaintenanceChecklistItem,
@@ -21,15 +35,17 @@ function resolveTimeItemStatus(
   }
 
   const anchor = item.lastCompletedAt
-    ? new Date(item.lastCompletedAt)
+    ? parseMaintenanceDate(item.lastCompletedAt)
     : new Date(car.createdAt);
   const nextDueDate = addMaintenanceInterval(anchor, item.frequency as MaintenanceFrequency);
+  const today = startOfLocalDay(now);
+  const dueDay = startOfLocalDay(nextDueDate);
 
-  if (now > nextDueDate) {
+  if (today > dueDay) {
     return { status: 'overdue', nextDueDate, nextDueOdometerKm: null };
   }
 
-  if (now.toDateString() === nextDueDate.toDateString()) {
+  if (today.getTime() === dueDay.getTime()) {
     return { status: 'due', nextDueDate, nextDueOdometerKm: null };
   }
 
@@ -48,9 +64,8 @@ function resolveMileageItemStatus(
     };
   }
 
-  const initialKm = car.personalInitialOdometerKm ?? 0;
-  const currentKm = car.personalCurrentOdometerKm ?? initialKm;
-  const baseKm = item.lastCompletedOdometerKm ?? initialKm;
+  const currentKm = car.personalCurrentOdometerKm ?? 0;
+  const baseKm = item.lastCompletedOdometerKm ?? currentKm;
   const nextDueOdometerKm = baseKm + item.mileageIntervalKm;
 
   if (currentKm >= nextDueOdometerKm) {
@@ -98,12 +113,36 @@ export function enrichPersonalMaintenanceChecklist(
   );
 }
 
-export function hasMileagePersonalItems(items: { scheduleType: string }[]): boolean {
-  return items.some((item) => item.scheduleType === 'mileage');
-}
-
 export const DEFAULT_PERSONAL_MAINTENANCE_PRESETS = [
   { title: 'Washing', scheduleType: 'time' as const, frequency: 'weekly' as const },
   { title: 'General service', scheduleType: 'time' as const, frequency: 'monthly' as const },
   { title: 'Oil change', scheduleType: 'mileage' as const, mileageIntervalKm: 5000 },
 ];
+
+export const DUPLICATE_MILEAGE_COMPLETION_MESSAGE =
+  'This service was already recorded today at this mileage';
+
+function isSameLocalCalendarDay(left: Date | string, right: Date): boolean {
+  const leftDate = typeof left === 'string' ? new Date(left) : left;
+
+  return (
+    leftDate.getFullYear() === right.getFullYear() &&
+    leftDate.getMonth() === right.getMonth() &&
+    leftDate.getDate() === right.getDate()
+  );
+}
+
+export function isDuplicateMileageCompletion(
+  item: Pick<PersonalMaintenanceChecklistItem, 'lastCompletedAt' | 'lastCompletedOdometerKm'>,
+  odometerKm: number,
+  completedAt = new Date(),
+): boolean {
+  if (!item.lastCompletedAt || item.lastCompletedOdometerKm == null) {
+    return false;
+  }
+
+  return (
+    isSameLocalCalendarDay(item.lastCompletedAt, completedAt) &&
+    item.lastCompletedOdometerKm === odometerKm
+  );
+}

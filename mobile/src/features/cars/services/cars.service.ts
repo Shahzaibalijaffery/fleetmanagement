@@ -1,14 +1,7 @@
 import { apiClient } from '@/shared/api/client';
 import type { ApiResponse, PaginatedResponse } from '@/shared/api/types';
 
-import type {
-  Car,
-  CreateCarRequest,
-  ListCarsParams,
-  UpdateCarRequest,
-  UpdatePersonalMaintenanceRequest,
-  UpdatePersonalOdometerRequest,
-} from '../types/cars.types';
+import type { Car, CreateCarRequest, ListCarsParams, UpdateCarRequest } from '../types/cars.types';
 
 const PAGE_LIMIT = 20;
 
@@ -28,27 +21,6 @@ export const carsService = {
     apiClient.patch<ApiResponse<Car>>(`/cars/${carId}`, payload).then((r) => r.data.data),
 
   deleteCar: (carId: string) => apiClient.delete(`/cars/${carId}`),
-
-  updatePersonalMaintenance: (carId: string, payload: UpdatePersonalMaintenanceRequest) =>
-    apiClient
-      .patch<ApiResponse<Car>>(`/cars/${carId}/personal-maintenance`, payload)
-      .then((r) => r.data.data),
-
-  updatePersonalOdometer: (carId: string, payload: UpdatePersonalOdometerRequest) =>
-    apiClient
-      .patch<ApiResponse<Car>>(`/cars/${carId}/personal-maintenance/odometer`, payload)
-      .then((r) => r.data.data),
-
-  completePersonalMaintenanceItem: (
-    carId: string,
-    itemId: string,
-    personalCurrentOdometerKm?: number,
-  ) =>
-    apiClient
-      .post<ApiResponse<Car>>(`/cars/${carId}/personal-maintenance/${itemId}/complete`, {
-        personalCurrentOdometerKm,
-      })
-      .then((r) => r.data.data),
 };
 
 export const CARS_PAGE_LIMIT = PAGE_LIMIT;

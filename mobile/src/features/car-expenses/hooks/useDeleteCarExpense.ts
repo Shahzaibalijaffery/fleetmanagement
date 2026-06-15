@@ -10,6 +10,7 @@ export function useDeleteCarExpense(carId: string) {
     mutationFn: (logId: string) => carExpensesService.deleteExpense(carId, logId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: carExpensesKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
     },
   });
 }

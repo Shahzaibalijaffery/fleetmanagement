@@ -3,19 +3,22 @@ import { View } from 'react-native';
 import { AppText, Card } from '@/shared/components';
 import { useThemedStyles } from '@/shared/hooks/useThemedStyles';
 
+import type { CarStatus } from '@/features/cars/types/cars.types';
+
 import type { OwnerDashboard } from '../types/dashboard.types';
 import { StatCard } from './StatCard';
 import { createStyles } from './OwnerDashboardView.styles';
 
 interface OwnerDashboardViewProps {
   data: OwnerDashboard;
+  onCarStatPress: (status?: CarStatus) => void;
 }
 
 function formatAmount(amount: number): string {
   return amount.toLocaleString();
 }
 
-export function OwnerDashboardView({ data }: OwnerDashboardViewProps) {
+export function OwnerDashboardView({ data, onCarStatPress }: OwnerDashboardViewProps) {
   const styles = useThemedStyles(createStyles);
 
   return (
@@ -24,9 +27,24 @@ export function OwnerDashboardView({ data }: OwnerDashboardViewProps) {
         Fleet overview
       </AppText>
       <View style={styles.grid}>
-        <StatCard label="Total cars" value={String(data.totalCars)} tone="primary" />
-        <StatCard label="Available" value={String(data.availableCars)} tone="success" />
-        <StatCard label="Assigned" value={String(data.assignedCars)} tone="accent" />
+        <StatCard
+          label="Total cars"
+          value={String(data.totalCars)}
+          tone="primary"
+          onPress={() => onCarStatPress()}
+        />
+        <StatCard
+          label="Available"
+          value={String(data.availableCars)}
+          tone="success"
+          onPress={() => onCarStatPress('available')}
+        />
+        <StatCard
+          label="Assigned"
+          value={String(data.assignedCars)}
+          tone="accent"
+          onPress={() => onCarStatPress('assigned')}
+        />
         <StatCard
           label="Outstanding payments"
           value={formatAmount(data.outstandingPayments.totalAmount)}

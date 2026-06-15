@@ -4,47 +4,25 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { AuthErrorBanner } from '@/features/auth/components/AuthErrorBanner';
 import type { Car, PersonalMaintenanceChecklistItem } from '@/features/cars/types/cars.types';
-import {
-  MAINTENANCE_FREQUENCY_LABELS,
-} from '@/features/contracts/types/contracts.types';
 import { parseOdometerInput } from '@/features/contracts/utils/parseOdometerInput';
 import type { MainStackParamList } from '@/app/navigation/types';
-import { AppText, Badge, Button, Card, Input } from '@/shared/components';
+import { AppText, Button, Card, Input } from '@/shared/components';
 import { getErrorMessage } from '@/shared/utils/getErrorMessage';
 import { useThemedStyles } from '@/shared/hooks/useThemedStyles';
 
 import { useCompletePersonalMaintenanceItem } from '../hooks/useCompletePersonalMaintenanceItem';
+import { useUpdatePersonalMaintenanceItem } from '../hooks/useUpdatePersonalMaintenanceItem';
 import { useUpdatePersonalOdometer } from '../hooks/useUpdatePersonalOdometer';
+import {
+  CompleteMaintenanceModal,
+  type CompleteMaintenanceValues,
+} from './CompleteMaintenanceModal';
+import {
+  EditMaintenanceItemModal,
+  type EditMaintenanceItemValues,
+} from './EditMaintenanceItemModal';
+import { PersonalMaintenanceChecklistCard } from './PersonalMaintenanceChecklistCard';
 import { createStyles } from './PersonalMaintenanceSection.styles';
-
-const STATUS_LABELS: Record<PersonalMaintenanceChecklistItem['status'], string> = {
-  upcoming: 'Upcoming',
-  due: 'Due now',
-  overdue: 'Overdue',
-};
-
-function statusVariant(status: PersonalMaintenanceChecklistItem['status']) {
-  switch (status) {
-    case 'overdue':
-      return 'error' as const;
-    case 'due':
-      return 'warning' as const;
-    default:
-      return 'success' as const;
-  }
-}
-
-function formatDueText(item: PersonalMaintenanceChecklistItem): string {
-  if (item.scheduleType === 'time' && item.nextDueDate) {
-    return `Next due: ${item.nextDueDate.slice(0, 10)}`;
-  }
-
-  if (item.scheduleType === 'mileage' && item.nextDueOdometerKm != null) {
-    return `Next due at: ${item.nextDueOdometerKm.toLocaleString()} km`;
-  }
-
-  return 'No upcoming due date';
-}
 
 interface PersonalMaintenanceSectionProps {
   car: Car;
@@ -55,37 +33,49 @@ export function PersonalMaintenanceSection({ car, navigation }: PersonalMaintena
   const styles = useThemedStyles(createStyles);
   const currentKm = car.personalCurrentOdometerKm ?? 0;
   const [odometerInput, setOdometerInput] = useState(String(currentKm));
-  const [completingItemId, setCompletingItemId] = useState<string | null>(null);
+  const [completingItem, setCompletingItem] = useState<PersonalMaintenanceChecklistItem | null>(
+    null,
+  );
+  const [editingItem, setEditingItem] = useState<PersonalMaintenanceChecklistItem | null>(null);
   const updateOdometer = useUpdatePersonalOdometer(car.id);
   const completeItem = useCompletePersonalMaintenanceItem(car.id);
+  const updateItem = useUpdatePersonalMaintenanceItem(car.id);
   const checklist = car.personalMaintenanceChecklist ?? [];
 
   useEffect(() => {
     setOdometerInput(String(car.personalCurrentOdometerKm ?? 0));
   }, [car.personalCurrentOdometerKm]);
 
-  const handleUpdateOdometer = () => {
-    updateOdometer.mutate(parseOdometerInput(odometerInput, currentKm));
-  };
+  const handleConfirmComplete = (values: CompleteMaintenanceValues) => {
+    if (!completingItem) {
+      return;
+    }
 
-  const handleComplete = (item: PersonalMaintenanceChecklistItem) => {
-    setCompletingItemId(item.id);
-    const initialKm = car.personalInitialOdometerKm ?? 0;
     completeItem.mutate(
-      {
-        itemId: item.id,
-        personalCurrentOdometerKm:
-          item.scheduleType === 'mileage'
-            ? parseOdometerInput(odometerInput, Math.max(currentKm, initialKm))
-            : undefined,
-      },
-      {
-        onSettled: () => setCompletingItemId(null),
-      },
+      { itemId: completingItem.id, cost: values.cost, odometerKm: values.odometerKm },
+      { onSuccess: () => setCompletingItem(null) },
     );
   };
 
-  const actionError = updateOdometer.error ?? completeItem.error;
+  const handleSaveEdit = (values: EditMaintenanceItemValues) => {
+    if (!editingItem) {
+      return;
+    }
+
+    updateItem.mutate(
+      {
+        itemId: editingItem.id,
+        payload: {
+          scheduleType: values.scheduleType,
+          frequency: values.frequency,
+          mileageIntervalKm: values.mileageIntervalKm,
+          lastCompletedAt: values.lastCompletedAt,
+          lastCompletedOdometerKm: values.lastCompletedOdometerKm,
+        },
+      },
+      { onSuccess: () => setEditingItem(null) },
+    );
+  };
 
   return (
     <Card padding="md" style={styles.section}>
@@ -107,21 +97,23 @@ export function PersonalMaintenanceSection({ car, navigation }: PersonalMaintena
 
       <View style={styles.odometerRow}>
         <Input
-          label="Current odometer (km)"
+          label="Odometer (km)"
           value={odometerInput}
           onChangeText={setOdometerInput}
           keyboardType="number-pad"
         />
         <Button
-          title="Update mileage"
-          onPress={handleUpdateOdometer}
+          title="Update"
+          onPress={() => updateOdometer.mutate(parseOdometerInput(odometerInput, currentKm))}
           loading={updateOdometer.isPending}
           size="sm"
           variant="outline"
         />
       </View>
 
-      {actionError ? <AuthErrorBanner message={getErrorMessage(actionError)} /> : null}
+      {updateOdometer.error ? (
+        <AuthErrorBanner message={getErrorMessage(updateOdometer.error)} />
+      ) : null}
 
       {checklist.length === 0 ? (
         <AppText variant="bodySmall" color="textSecondary">
@@ -129,41 +121,36 @@ export function PersonalMaintenanceSection({ car, navigation }: PersonalMaintena
         </AppText>
       ) : (
         checklist.map((item) => (
-          <View key={item.id} style={styles.item}>
-            <View style={styles.itemHeader}>
-              <AppText variant="body">{item.title}</AppText>
-              <Badge
-                label={STATUS_LABELS[item.status]}
-                variant={statusVariant(item.status)}
-                size="sm"
-              />
-            </View>
-            <AppText variant="caption" color="textSecondary">
-              {item.scheduleType === 'time' && item.frequency
-                ? `Every ${MAINTENANCE_FREQUENCY_LABELS[item.frequency].toLowerCase()}`
-                : `Every ${item.mileageIntervalKm?.toLocaleString() ?? '—'} km`}
-            </AppText>
-            <AppText variant="caption" color="textSecondary" style={styles.meta}>
-              {formatDueText(item)}
-            </AppText>
-            {item.lastCompletedAt ? (
-              <AppText variant="caption" color="textSecondary">
-                Last done: {item.lastCompletedAt.slice(0, 10)}
-                {item.lastCompletedOdometerKm != null
-                  ? ` at ${item.lastCompletedOdometerKm.toLocaleString()} km`
-                  : ''}
-              </AppText>
-            ) : null}
-            <Button
-              title="Mark complete"
-              onPress={() => handleComplete(item)}
-              loading={completeItem.isPending && completingItemId === item.id}
-              size="sm"
-              style={styles.action}
-            />
-          </View>
+          <PersonalMaintenanceChecklistCard
+            key={item.id}
+            item={item}
+            isCompleting={completeItem.isPending && completingItem?.id === item.id}
+            onEdit={() => setEditingItem(item)}
+            onComplete={() => setCompletingItem(item)}
+          />
         ))
       )}
+
+      <CompleteMaintenanceModal
+        visible={completingItem != null}
+        item={completingItem}
+        odometerKm={currentKm}
+        isSubmitting={completeItem.isPending}
+        error={completeItem.error}
+        onClose={() => setCompletingItem(null)}
+        onConfirm={handleConfirmComplete}
+      />
+
+      <EditMaintenanceItemModal
+        visible={editingItem != null}
+        item={editingItem}
+        odometerKm={currentKm}
+        carCreatedAt={car.createdAt}
+        isSubmitting={updateItem.isPending}
+        error={updateItem.error}
+        onClose={() => setEditingItem(null)}
+        onSave={handleSaveEdit}
+      />
     </Card>
   );
 }

@@ -17,15 +17,41 @@ import type { MainStackParamList } from '@/app/navigation/types';
 import { CarCard } from '../components/CarCard';
 import { CarListSkeleton } from '../components/CarListSkeleton';
 import { useCars } from '../hooks/useCars';
-import type { Car } from '../types/cars.types';
+import type { Car, CarStatus } from '../types/cars.types';
 import { createStyles } from './CarListScreen.styles';
 
 type CarListScreenProps = NativeStackScreenProps<MainStackParamList, 'CarList'>;
 
-export function CarListScreen({ navigation }: CarListScreenProps) {
+function getScreenCopy(status?: CarStatus) {
+  if (status === 'available') {
+    return {
+      title: 'Available cars',
+      emptyTitle: 'No available cars',
+      emptyMessage: 'Cars marked as available will appear here.',
+    };
+  }
+
+  if (status === 'assigned') {
+    return {
+      title: 'Assigned cars',
+      emptyTitle: 'No assigned cars',
+      emptyMessage: 'Cars with an active driver assignment will appear here.',
+    };
+  }
+
+  return {
+    title: 'My Cars',
+    emptyTitle: 'No cars yet',
+    emptyMessage: 'Add your first car to start managing your fleet.',
+  };
+}
+
+export function CarListScreen({ navigation, route }: CarListScreenProps) {
   const styles = useThemedStyles(createStyles);
+  const status = route.params?.status;
+  const screenCopy = getScreenCopy(status);
   const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage, isRefetching } =
-    useCars();
+    useCars({ status });
 
   const cars = useMemo(
     () => data?.pages.flatMap((page) => page.data) ?? [],
@@ -52,7 +78,7 @@ export function CarListScreen({ navigation }: CarListScreenProps) {
     return (
       <ScreenContainer>
         <AppStatusBar />
-        <ScreenHeader title="My Cars" style={styles.header} />
+        <ScreenHeader title={screenCopy.title} style={styles.header} />
         <CarListSkeleton />
       </ScreenContainer>
     );
@@ -62,7 +88,7 @@ export function CarListScreen({ navigation }: CarListScreenProps) {
     return (
       <ScreenContainer>
         <AppStatusBar />
-        <ScreenHeader title="My Cars" style={styles.header} />
+        <ScreenHeader title={screenCopy.title} style={styles.header} />
         <ErrorState
           message="Couldn't load your cars. Check your connection."
           onRetry={() => refetch()}
@@ -75,12 +101,12 @@ export function CarListScreen({ navigation }: CarListScreenProps) {
     return (
       <ScreenContainer>
         <AppStatusBar />
-        <ScreenHeader title="My Cars" style={styles.header} />
+        <ScreenHeader title={screenCopy.title} style={styles.header} />
         <EmptyState
-          title="No cars yet"
-          message="Add your first car to start managing your fleet."
-          actionLabel="Add car"
-          onAction={() => navigation.navigate('AddCar')}
+          title={screenCopy.emptyTitle}
+          message={screenCopy.emptyMessage}
+          actionLabel={status ? undefined : 'Add car'}
+          onAction={status ? undefined : () => navigation.navigate('AddCar')}
         />
       </ScreenContainer>
     );
@@ -93,7 +119,7 @@ export function CarListScreen({ navigation }: CarListScreenProps) {
     >
       <AppStatusBar />
       <ScreenHeader
-        title="My Cars"
+        title={screenCopy.title}
         style={styles.header}
         right={<Button title="Add car" onPress={() => navigation.navigate('AddCar')} size="sm" />}
       />

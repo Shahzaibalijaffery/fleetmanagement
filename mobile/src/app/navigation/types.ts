@@ -1,5 +1,7 @@
 import type { NavigatorScreenParams } from '@react-navigation/native';
 
+import type { CarStatus } from '@/features/cars/types/cars.types';
+
 export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
@@ -9,12 +11,15 @@ export type AuthStackParamList = {
 export type MainStackParamList = {
   Home: undefined;
   Profile: undefined;
-  CarList: undefined;
+  CarList: { status?: CarStatus } | undefined;
   CarDetail: { carId: string };
   AddCar: undefined;
   EditCar: { carId: string };
   AddCarExpense: { carId: string };
   CarExpenseDetail: { carId: string; logId: string };
+  AllExpenses: undefined;
+  AddExpense: undefined;
+  ExpenseDetail: { expenseId: string };
   EditPersonalMaintenance: { carId: string };
   AvailableCars: undefined;
   AvailableDrivers: undefined;

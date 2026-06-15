@@ -9,6 +9,7 @@ import { carExpensesRoutes } from '../car-expenses/car-expenses.routes';
 import { carsController } from './cars.controller';
 import {
   completePersonalMaintenanceItemSchema,
+  updatePersonalMaintenanceItemSchema,
   updatePersonalMaintenanceSchema,
   updatePersonalOdometerSchema,
 } from './personal-maintenance.validation';
@@ -35,6 +36,11 @@ router.patch(
   '/:carId/personal-maintenance/odometer',
   validate(updatePersonalOdometerSchema),
   carsController.updatePersonalOdometer,
+);
+router.patch(
+  '/:carId/personal-maintenance/:itemId',
+  validate(updatePersonalMaintenanceItemSchema),
+  carsController.updatePersonalMaintenanceItem,
 );
 router.post(
   '/:carId/personal-maintenance/:itemId/complete',

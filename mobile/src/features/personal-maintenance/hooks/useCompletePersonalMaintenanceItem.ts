@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { carsKeys } from '@/features/cars/hooks/cars.keys';
-import { carsService } from '@/features/cars/services/cars.service';
+
+import { personalMaintenanceService } from '../services/personal-maintenance.service';
 
 export function useCompletePersonalMaintenanceItem(carId: string) {
   const queryClient = useQueryClient();
@@ -9,14 +10,17 @@ export function useCompletePersonalMaintenanceItem(carId: string) {
   return useMutation({
     mutationFn: ({
       itemId,
-      personalCurrentOdometerKm,
+      cost,
+      odometerKm,
     }: {
       itemId: string;
-      personalCurrentOdometerKm?: number;
-    }) => carsService.completePersonalMaintenanceItem(carId, itemId, personalCurrentOdometerKm),
+      cost: number;
+      odometerKm?: number;
+    }) => personalMaintenanceService.completePersonalMaintenanceItem(carId, itemId, { cost, odometerKm }),
     onSuccess: (data) => {
       queryClient.setQueryData(carsKeys.detail(carId), data);
       queryClient.invalidateQueries({ queryKey: carsKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
     },
   });
 }

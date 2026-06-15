@@ -23,9 +23,9 @@ const maintenanceChecklistItemSchema = new Schema(
 
 const contractSchema = new Schema(
   {
-    assignmentId: { type: Schema.Types.ObjectId, ref: 'Assignment', required: true, index: true },
-    driverId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    carId: { type: Schema.Types.ObjectId, ref: 'Car', required: true, index: true },
+    assignmentId: { type: Schema.Types.ObjectId, ref: 'Assignment', required: true },
+    driverId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    carId: { type: Schema.Types.ObjectId, ref: 'Car', required: true },
     ownerId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     contractMode: { type: String, enum: CONTRACT_MODES, required: true },
     paymentFrequency: { type: String, enum: PAYMENT_FREQUENCIES, required: true },

@@ -12,6 +12,7 @@ export function useCreateCarExpense(carId: string) {
       carExpensesService.createExpense(carId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: carExpensesKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
     },
   });
 }

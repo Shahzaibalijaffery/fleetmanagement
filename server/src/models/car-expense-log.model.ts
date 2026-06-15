@@ -10,7 +10,7 @@ const carExpenseItemSchema = new Schema(
 
 const carExpenseLogSchema = new Schema(
   {
-    carId: { type: Schema.Types.ObjectId, ref: 'Car', required: true, index: true },
+    carId: { type: Schema.Types.ObjectId, ref: 'Car', required: true },
     ownerId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     expenseDate: { type: Date, required: true, index: true },
     visitTitle: { type: String, trim: true },

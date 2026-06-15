@@ -9,6 +9,17 @@ const DEFAULT_LOCAL_HOST = Platform.select({
 });
 
 const DEFAULT_LOCAL_API_URL = `http://${DEFAULT_LOCAL_HOST}:3000/api/v1`;
+const API_V1_SUFFIX = '/api/v1';
+
+function normalizeApiBaseUrl(url: string): string {
+  const trimmed = url.replace(/\/+$/, '');
+
+  if (trimmed.endsWith(API_V1_SUFFIX)) {
+    return trimmed;
+  }
+
+  return `${trimmed}${API_V1_SUFFIX}`;
+}
 
 function resolveAppEnv(): AppEnv {
   return APP_ENV === 'live' ? 'live' : 'local';
@@ -24,11 +35,11 @@ function resolveApiUrl(appEnv: AppEnv): string {
       );
     }
 
-    return liveUrl || DEFAULT_LOCAL_API_URL;
+    return liveUrl ? normalizeApiBaseUrl(liveUrl) : DEFAULT_LOCAL_API_URL;
   }
 
   const localOverride = API_URL_LOCAL?.trim();
-  return localOverride || DEFAULT_LOCAL_API_URL;
+  return localOverride ? normalizeApiBaseUrl(localOverride) : DEFAULT_LOCAL_API_URL;
 }
 
 const appEnv = resolveAppEnv();

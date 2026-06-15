@@ -6,7 +6,7 @@ import { useThemedStyles } from '@/shared/hooks/useThemedStyles';
 import type { MainStackParamList } from '@/app/navigation/types';
 
 import { useCarExpenses } from '../hooks/useCarExpenses';
-import { formatMoney } from '../utils/formatMoney';
+import { formatMoney } from '@/shared/utils/formatMoney';
 import { CarExpenseLogCard } from './CarExpenseLogCard';
 import { createStyles } from './CarExpensesSection.styles';
 

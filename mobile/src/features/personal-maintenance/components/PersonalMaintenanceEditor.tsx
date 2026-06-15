@@ -1,37 +1,47 @@
-import { View } from 'react-native';
-import type { Control } from 'react-hook-form';
+import { View } from "react-native";
+import type { Control } from "react-hook-form";
 import type {
   FieldArrayWithId,
   UseFieldArrayAppend,
   UseFieldArrayRemove,
   UseFieldArrayReplace,
-} from 'react-hook-form';
-import { Controller, useFormState } from 'react-hook-form';
+} from "react-hook-form";
+import { useFormState } from "react-hook-form";
 
 import {
   DEFAULT_MAINTENANCE_PRESETS,
   type MaintenanceChecklistItemInput,
-} from '@/features/contracts/types/contracts.types';
-import { AppText, Button, Input } from '@/shared/components';
-import { useThemedStyles } from '@/shared/hooks/useThemedStyles';
+} from "@/features/contracts/types/contracts.types";
+import { AppText, Button } from "@/shared/components";
+import { useThemedStyles } from "@/shared/hooks/useThemedStyles";
 
-import type { PersonalMaintenanceFormValues } from '../validation/personal-maintenance.schemas';
-import { PersonalMaintenanceChecklistItemRow } from './PersonalMaintenanceChecklistItemRow';
-import { createStyles } from './PersonalMaintenanceEditor.styles';
+import type { PersonalMaintenanceFormValues } from "../validation/personal-maintenance.schemas";
+import { PersonalMaintenanceChecklistItemRow } from "./PersonalMaintenanceChecklistItemRow";
+import { createStyles } from "./PersonalMaintenanceEditor.styles";
 
 interface PersonalMaintenanceEditorProps {
   control: Control<PersonalMaintenanceFormValues>;
-  fields: FieldArrayWithId<PersonalMaintenanceFormValues, 'personalMaintenanceChecklist', 'id'>[];
-  append: UseFieldArrayAppend<PersonalMaintenanceFormValues, 'personalMaintenanceChecklist'>;
-  replace: UseFieldArrayReplace<PersonalMaintenanceFormValues, 'personalMaintenanceChecklist'>;
+  fields: FieldArrayWithId<
+    PersonalMaintenanceFormValues,
+    "personalMaintenanceChecklist",
+    "id"
+  >[];
+  append: UseFieldArrayAppend<
+    PersonalMaintenanceFormValues,
+    "personalMaintenanceChecklist"
+  >;
+  replace: UseFieldArrayReplace<
+    PersonalMaintenanceFormValues,
+    "personalMaintenanceChecklist"
+  >;
   remove: UseFieldArrayRemove;
 }
 
 function createBlankItem(): MaintenanceChecklistItemInput {
   return {
-    title: '',
-    scheduleType: 'time',
-    frequency: 'weekly',
+    title: "",
+    scheduleType: "time",
+    frequency: "weekly",
   };
 }
 
@@ -45,40 +55,16 @@ export function PersonalMaintenanceEditor({
   const styles = useThemedStyles(createStyles);
   const { errors } = useFormState({
     control,
-    name: ['personalMaintenanceChecklist', 'personalInitialOdometerKm'],
+    name: ["personalMaintenanceChecklist"],
   });
 
   return (
     <View style={styles.section}>
       <AppText variant="label">Running cost items</AppText>
       <AppText variant="caption" color="textSecondary">
-        Track washing, oil change, and service on a repeating schedule — separate from repair bills.
+        Track washing, oil change, and service on a repeating schedule —
+        separate from repair bills.
       </AppText>
-
-      <Controller
-        control={control}
-        name="personalInitialOdometerKm"
-        render={({ field, fieldState }) => (
-          <Input
-            label="Initial odometer (km)"
-            value={field.value != null ? String(field.value) : ''}
-            onChangeText={(text) => {
-              if (text === '') {
-                field.onChange(undefined);
-                return;
-              }
-              const parsed = Number(text);
-              if (!Number.isNaN(parsed)) {
-                field.onChange(parsed);
-              }
-            }}
-            onBlur={field.onBlur}
-            keyboardType="number-pad"
-            placeholder="Required for mileage-based items"
-            error={fieldState.error?.message ?? errors.personalInitialOdometerKm?.message}
-          />
-        )}
-      />
 
       {fields.map((field, index) => (
         <PersonalMaintenanceChecklistItemRow

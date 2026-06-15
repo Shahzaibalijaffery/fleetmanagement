@@ -30,25 +30,10 @@ const maintenanceItemSchema = z
     }
   });
 
-export const personalMaintenanceFormSchema = z
-  .object({
-    personalInitialOdometerKm: z.coerce.number().min(0).optional(),
-    personalMaintenanceChecklist: z
-      .array(maintenanceItemSchema)
-      .min(1, 'Add at least one maintenance item'),
-  })
-  .superRefine((data, ctx) => {
-    const hasMileageItems = data.personalMaintenanceChecklist.some(
-      (item) => item.scheduleType === 'mileage',
-    );
-
-    if (hasMileageItems && data.personalInitialOdometerKm == null) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Initial odometer is required when using mileage-based items',
-        path: ['personalInitialOdometerKm'],
-      });
-    }
-  });
+export const personalMaintenanceFormSchema = z.object({
+  personalMaintenanceChecklist: z
+    .array(maintenanceItemSchema)
+    .min(1, 'Add at least one maintenance item'),
+});
 
 export type PersonalMaintenanceFormValues = z.infer<typeof personalMaintenanceFormSchema>;

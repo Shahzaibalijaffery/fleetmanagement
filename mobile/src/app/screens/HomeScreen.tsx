@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -16,6 +16,7 @@ import { useSignOut } from '@/features/auth/hooks/useSignOut';
 import { AppStatusBar, AppText, Badge, Button, ErrorState, ScreenContainer } from '@/shared/components';
 import { env } from '@/shared/config/env';
 import { useThemedStyles } from '@/shared/hooks/useThemedStyles';
+import type { CarStatus } from '@/features/cars/types/cars.types';
 import type { MainStackParamList } from '@/app/navigation/types';
 import { useAuthStore } from '@/stores/auth.store';
 
@@ -31,6 +32,13 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
 
   const isDriver = user?.role === 'driver';
   const isBusy = isDriver && data && !isOwnerDashboard(data) && Boolean(data.assignedCar);
+
+  const handleCarStatPress = useCallback(
+    (status?: CarStatus) => {
+      navigation.navigate('CarList', status ? { status } : {});
+    },
+    [navigation],
+  );
 
   const quickActionSections = useMemo(() => {
     if (user?.role === 'owner') {
@@ -96,7 +104,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
       ) : null}
 
       {!isLoading && !isError && data && user?.role === 'owner' && isOwnerDashboard(data) ? (
-        <OwnerDashboardView data={data} />
+        <OwnerDashboardView data={data} onCarStatPress={handleCarStatPress} />
       ) : null}
 
       {!isLoading && !isError && data && user?.role === 'driver' && !isOwnerDashboard(data) ? (

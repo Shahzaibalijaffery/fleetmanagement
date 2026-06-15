@@ -46,19 +46,25 @@ export interface Car {
   carType: CarType;
   status: CarStatus;
   personalMaintenanceChecklist?: PersonalMaintenanceChecklistItem[];
-  personalInitialOdometerKm?: number;
   personalCurrentOdometerKm?: number;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface UpdatePersonalMaintenanceRequest {
-  personalInitialOdometerKm?: number;
   personalMaintenanceChecklist: MaintenanceChecklistItemInput[];
 }
 
 export interface UpdatePersonalOdometerRequest {
   personalCurrentOdometerKm: number;
+}
+
+export interface UpdatePersonalMaintenanceItemRequest {
+  scheduleType?: MaintenanceScheduleType;
+  frequency?: MaintenanceFrequency;
+  mileageIntervalKm?: number;
+  lastCompletedAt?: string | null;
+  lastCompletedOdometerKm?: number | null;
 }
 
 export interface CreateCarRequest {

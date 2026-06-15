@@ -11,13 +11,14 @@ interface StatCardProps {
   value: string;
   hint?: string;
   tone?: AccentTone;
+  onPress?: () => void;
 }
 
-export function StatCard({ label, value, hint, tone = 'primary' }: StatCardProps) {
+export function StatCard({ label, value, hint, tone = 'primary', onPress }: StatCardProps) {
   const styles = useThemedStyles(createStyles);
 
   return (
-    <Card padding="md" accentTone={tone} style={styles.card}>
+    <Card padding="md" accentTone={tone} style={styles.card} onPress={onPress}>
       <View style={styles.content}>
         <AppText variant="caption" color="textSecondary">
           {label}

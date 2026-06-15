@@ -44,6 +44,29 @@ export const carExpensesRepository = {
     ]);
   },
 
+  findByOwnerIdInRange(ownerId: string, start: Date, end: Date) {
+    return CarExpenseLogModel.find({
+      ownerId,
+      expenseDate: { $gte: start, $lt: end },
+    })
+      .populate('carId', 'brand model registrationNumber')
+      .sort({ expenseDate: -1, createdAt: -1 })
+      .lean();
+  },
+
+  sumTotalByOwnerIdInRange(ownerId: string, start: Date, end: Date) {
+    return CarExpenseLogModel.aggregate<{ total: number }>([
+      {
+        $match: {
+          ownerId: new Types.ObjectId(ownerId),
+          expenseDate: { $gte: start, $lt: end },
+        },
+      },
+      { $unwind: '$items' },
+      { $group: { _id: null, total: { $sum: '$items.amount' } } },
+    ]);
+  },
+
   findById(logId: string) {
     return CarExpenseLogModel.findById(logId).lean();
   },
