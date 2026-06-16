@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "250402072994",
+    "project_id": "fleet-link-5213a",
+    "storage_bucket": "fleet-link-5213a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:250402072994:android:c0faef2b73bfb96c2f2afb",
+        "android_client_info": {
+          "package_name": "com.anonymous.fleetlink"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDeneY8TiRN1SZu-Az5OQkFJS7Riu-td2w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -9,6 +9,10 @@ import type {
 import { Controller, useFormState } from 'react-hook-form';
 
 import { AppText, Button, Input } from '@/shared/components';
+import {
+  formatNumericFieldValue,
+  handleIntegerFieldChange,
+} from '@/shared/utils/numericInput';
 import { useThemedStyles } from '@/shared/hooks/useThemedStyles';
 
 import {
@@ -61,17 +65,8 @@ export function MaintenanceChecklistEditor({
         render={({ field, fieldState }) => (
           <Input
             label="Initial odometer (km)"
-            value={field.value != null ? String(field.value) : ''}
-            onChangeText={(text) => {
-              if (text === '') {
-                field.onChange(undefined);
-                return;
-              }
-              const parsed = Number(text);
-              if (!Number.isNaN(parsed)) {
-                field.onChange(parsed);
-              }
-            }}
+            value={formatNumericFieldValue(field.value)}
+            onChangeText={(text) => handleIntegerFieldChange(text, field.onChange)}
             onBlur={field.onBlur}
             keyboardType="number-pad"
             placeholder="Required for mileage-based items"

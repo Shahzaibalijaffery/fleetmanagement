@@ -27,6 +27,9 @@ export type { ErrorStateProps } from './ErrorState';
 export { Input } from './Input';
 export type { InputProps } from './Input';
 
+export { DateInput } from './DateInput';
+export type { DateInputProps } from './DateInput';
+
 export { LoadingSkeleton } from './LoadingSkeleton';
 export type { LoadingSkeletonProps } from './LoadingSkeleton';
 

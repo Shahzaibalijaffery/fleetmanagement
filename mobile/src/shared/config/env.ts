@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { APP_ENV, API_URL_LIVE, API_URL_LOCAL } from '@env';
+import { APP_ENV, API_URL_LIVE, API_URL_LOCAL, PUSH_NOTIFICATIONS_ENABLED } from '@env';
 
 export type AppEnv = 'local' | 'live';
 
@@ -45,6 +45,10 @@ function resolveApiUrl(appEnv: AppEnv): string {
 const appEnv = resolveAppEnv();
 const apiUrl = resolveApiUrl(appEnv);
 
+function resolvePushNotificationsEnabled(): boolean {
+  return PUSH_NOTIFICATIONS_ENABLED === 'true';
+}
+
 if (__DEV__) {
   console.log(`[FleetLink] APP_ENV=${appEnv} → ${apiUrl}`);
 }
@@ -54,4 +58,5 @@ export const env = {
   API_URL: apiUrl,
   IS_LIVE: appEnv === 'live',
   IS_LOCAL: appEnv === 'local',
+  PUSH_NOTIFICATIONS_ENABLED: resolvePushNotificationsEnabled(),
 } as const;

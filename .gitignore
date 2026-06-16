@@ -17,6 +17,7 @@ node_modules/
 *.keystore
 secrets/
 credentials/
+*firebase-adminsdk*.json
 
 # --- Build outputs ---
 dist/

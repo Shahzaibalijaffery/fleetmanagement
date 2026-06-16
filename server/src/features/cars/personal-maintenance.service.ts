@@ -1,6 +1,7 @@
 import { NotFoundError, ValidationError } from '../../shared/errors/AppError';
 
 import { expensesService } from '../expenses/expenses.service';
+import { notificationRemindersService } from '../notification-reminders/notification-reminders.service';
 
 import { toCar } from './cars.mapper';
 import { carsRepository } from './cars.repository';
@@ -122,6 +123,10 @@ export const personalMaintenanceService = {
       throw new NotFoundError('Maintenance item not found');
     }
 
+    if (parsedLastCompletedAt !== undefined) {
+      await notificationRemindersService.resetMaintenanceReminders(carId, itemId);
+    }
+
     return toCar(updated);
   },
 
@@ -175,6 +180,8 @@ export const personalMaintenanceService = {
         expenseDate: completedAt.toISOString(),
       });
     }
+
+    await notificationRemindersService.resetMaintenanceReminders(carId, itemId);
 
     return toCar(updated);
   },

@@ -24,6 +24,7 @@ export function OwnerProfileForm({ profile }: OwnerProfileFormProps) {
 
   const { control, handleSubmit, reset } = useForm<OwnerProfileFormValues>({
     resolver: zodResolver(ownerProfileSchema),
+    mode: 'onBlur',
     defaultValues: {
       name: profile.name,
       phone: profile.phone ?? '',

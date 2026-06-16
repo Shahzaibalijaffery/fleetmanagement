@@ -4,10 +4,19 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { AuthErrorBanner } from '@/features/auth/components/AuthErrorBanner';
 import type { Car, PersonalMaintenanceChecklistItem } from '@/features/cars/types/cars.types';
+import {
+  getMaintenanceReminderPreferenceField,
+  getMaintenanceReminderToggleLabel,
+  useNotificationPreferences,
+  useUpdateNotificationPreferences,
+} from '@/features/notification-reminders';
 import { parseOdometerInput } from '@/features/contracts/utils/parseOdometerInput';
 import type { MainStackParamList } from '@/app/navigation/types';
 import { AppText, Button, Card, Input } from '@/shared/components';
+import { env } from '@/shared/config/env';
 import { getErrorMessage } from '@/shared/utils/getErrorMessage';
+import { sanitizeIntegerInput } from '@/shared/utils/numericInput';
+import { odometerUpdateFormSchema } from '@/shared/validation/field.schemas';
 import { useThemedStyles } from '@/shared/hooks/useThemedStyles';
 
 import { useCompletePersonalMaintenanceItem } from '../hooks/useCompletePersonalMaintenanceItem';
@@ -33,6 +42,7 @@ export function PersonalMaintenanceSection({ car, navigation }: PersonalMaintena
   const styles = useThemedStyles(createStyles);
   const currentKm = car.personalCurrentOdometerKm ?? 0;
   const [odometerInput, setOdometerInput] = useState(String(currentKm));
+  const [odometerError, setOdometerError] = useState<string | undefined>();
   const [completingItem, setCompletingItem] = useState<PersonalMaintenanceChecklistItem | null>(
     null,
   );
@@ -40,11 +50,25 @@ export function PersonalMaintenanceSection({ car, navigation }: PersonalMaintena
   const updateOdometer = useUpdatePersonalOdometer(car.id);
   const completeItem = useCompletePersonalMaintenanceItem(car.id);
   const updateItem = useUpdatePersonalMaintenanceItem(car.id);
+  const { data: notificationPreferences } = useNotificationPreferences();
+  const updateNotificationPreferences = useUpdateNotificationPreferences();
   const checklist = car.personalMaintenanceChecklist ?? [];
 
   useEffect(() => {
     setOdometerInput(String(car.personalCurrentOdometerKm ?? 0));
   }, [car.personalCurrentOdometerKm]);
+
+  const handleUpdateOdometer = () => {
+    const result = odometerUpdateFormSchema.safeParse({ odometer: odometerInput });
+
+    if (!result.success) {
+      setOdometerError(result.error.issues[0]?.message ?? 'Enter a valid odometer reading');
+      return;
+    }
+
+    setOdometerError(undefined);
+    updateOdometer.mutate(parseOdometerInput(odometerInput, currentKm));
+  };
 
   const handleConfirmComplete = (values: CompleteMaintenanceValues) => {
     if (!completingItem) {
@@ -99,12 +123,18 @@ export function PersonalMaintenanceSection({ car, navigation }: PersonalMaintena
         <Input
           label="Odometer (km)"
           value={odometerInput}
-          onChangeText={setOdometerInput}
+          onChangeText={(value) => {
+            setOdometerInput(sanitizeIntegerInput(value));
+            if (odometerError) {
+              setOdometerError(undefined);
+            }
+          }}
           keyboardType="number-pad"
+          error={odometerError}
         />
         <Button
           title="Update"
-          onPress={() => updateOdometer.mutate(parseOdometerInput(odometerInput, currentKm))}
+          onPress={handleUpdateOdometer}
           loading={updateOdometer.isPending}
           size="sm"
           variant="outline"
@@ -120,15 +150,36 @@ export function PersonalMaintenanceSection({ car, navigation }: PersonalMaintena
           No maintenance items yet. Tap Edit items to add washing, oil change, etc.
         </AppText>
       ) : (
-        checklist.map((item) => (
-          <PersonalMaintenanceChecklistCard
-            key={item.id}
-            item={item}
-            isCompleting={completeItem.isPending && completingItem?.id === item.id}
-            onEdit={() => setEditingItem(item)}
-            onComplete={() => setCompletingItem(item)}
-          />
-        ))
+        checklist.map((item) => {
+          const preferenceField = getMaintenanceReminderPreferenceField(item.title);
+          const reminderEnabled =
+            preferenceField && notificationPreferences
+              ? notificationPreferences[preferenceField]
+              : undefined;
+
+          return (
+            <PersonalMaintenanceChecklistCard
+              key={item.id}
+              item={item}
+              isCompleting={completeItem.isPending && completingItem?.id === item.id}
+              onEdit={() => setEditingItem(item)}
+              onComplete={() => setCompletingItem(item)}
+              reminderEnabled={
+                env.PUSH_NOTIFICATIONS_ENABLED ? reminderEnabled : undefined
+              }
+              reminderLabel={
+                preferenceField ? getMaintenanceReminderToggleLabel(preferenceField) : undefined
+              }
+              onReminderChange={
+                preferenceField && env.PUSH_NOTIFICATIONS_ENABLED
+                  ? (value) =>
+                      updateNotificationPreferences.mutate({ [preferenceField]: value })
+                  : undefined
+              }
+              isUpdatingReminder={updateNotificationPreferences.isPending}
+            />
+          );
+        })
       )}
 
       <CompleteMaintenanceModal

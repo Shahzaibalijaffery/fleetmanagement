@@ -1,7 +1,13 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { RefreshControl, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+
+import {
+  useNotificationPreferences,
+  useUpdateNotificationPreferences,
+} from '@/features/notification-reminders';
+import { env } from '@/shared/config/env';
 
 import {
   AppStatusBar,
@@ -16,12 +22,18 @@ import type { MainStackParamList } from '@/app/navigation/types';
 
 import { AddSalaryModal } from '../components/AddSalaryModal';
 import { ExpenseListCard } from '../components/ExpenseListCard';
+import { ExpenseSmallGroupCard } from '../components/ExpenseSmallGroupCard';
 import { ExpenseListSkeleton } from '../components/ExpenseListSkeleton';
 import { ExpenseMonthPickerModal } from '../components/ExpenseMonthPickerModal';
 import { ExpenseMonthSummary } from '../components/ExpenseMonthSummary';
 import { useExpenses } from '../hooks/useExpenses';
 import type { ExpenseListItem } from '../types/expenses.types';
 import { formatExpenseMonth, getCurrentExpenseMonth } from '../utils/expenseMonth';
+import {
+  getExpenseListRowKey,
+  groupSmallExpenses,
+  type ExpenseListRow,
+} from '../utils/groupSmallExpenses';
 import { createStyles } from './AllExpensesScreen.styles';
 
 type AllExpensesScreenProps = NativeStackScreenProps<MainStackParamList, 'AllExpenses'>;
@@ -32,6 +44,17 @@ export function AllExpensesScreen({ navigation }: AllExpensesScreenProps) {
   const [selectedMonth, setSelectedMonth] = useState(getCurrentExpenseMonth);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showSalaryModal, setShowSalaryModal] = useState(false);
+  const [isSmallGroupExpanded, setIsSmallGroupExpanded] = useState(false);
+
+  const { data: notificationPreferences } = useNotificationPreferences();
+  const updateNotificationPreferences = useUpdateNotificationPreferences();
+
+  const handleDailyExpenseRemindersChange = useCallback(
+    (value: boolean) => {
+      updateNotificationPreferences.mutate({ dailyExpenseReminders: value });
+    },
+    [updateNotificationPreferences],
+  );
 
   const filters = useMemo(
     () => ({
@@ -58,6 +81,12 @@ export function AllExpensesScreen({ navigation }: AllExpensesScreenProps) {
     [data],
   );
 
+  const expenseRows = useMemo(() => groupSmallExpenses(expenses), [expenses]);
+
+  useEffect(() => {
+    setIsSmallGroupExpanded(false);
+  }, [selectedMonth.year, selectedMonth.month, includeCarExpenses]);
+
   const totalSpent = data?.pages[0]?.totalSpent ?? 0;
   const salary = data?.pages[0]?.salary ?? null;
   const remainingSalary = data?.pages[0]?.remainingSalary ?? null;
@@ -79,10 +108,23 @@ export function AllExpensesScreen({ navigation }: AllExpensesScreenProps) {
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: ExpenseListItem }) => (
-      <ExpenseListCard expense={item} onPress={() => handleExpensePress(item)} />
-    ),
-    [handleExpensePress],
+    ({ item }: { item: ExpenseListRow }) => {
+      if (item.type === 'small-group') {
+        return (
+          <ExpenseSmallGroupCard
+            expenses={item.expenses}
+            isExpanded={isSmallGroupExpanded}
+            onToggle={() => setIsSmallGroupExpanded((current) => !current)}
+            onExpensePress={handleExpensePress}
+          />
+        );
+      }
+
+      return (
+        <ExpenseListCard expense={item.expense} onPress={() => handleExpensePress(item.expense)} />
+      );
+    },
+    [handleExpensePress, isSmallGroupExpanded],
   );
 
   const handleLoadMore = () => {
@@ -103,6 +145,15 @@ export function AllExpensesScreen({ navigation }: AllExpensesScreenProps) {
           onIncludeCarExpensesChange={setIncludeCarExpenses}
           onChangeMonth={() => setShowMonthPicker(true)}
           onAddSalary={() => setShowSalaryModal(true)}
+          dailyExpenseReminders={
+            env.PUSH_NOTIFICATIONS_ENABLED
+              ? notificationPreferences?.dailyExpenseReminders
+              : undefined
+          }
+          onDailyExpenseRemindersChange={
+            env.PUSH_NOTIFICATIONS_ENABLED ? handleDailyExpenseRemindersChange : undefined
+          }
+          isUpdatingReminders={updateNotificationPreferences.isPending}
         />
       </View>
     ),
@@ -113,6 +164,9 @@ export function AllExpensesScreen({ navigation }: AllExpensesScreenProps) {
       salary,
       remainingSalary,
       includeCarExpenses,
+      notificationPreferences?.dailyExpenseReminders,
+      handleDailyExpenseRemindersChange,
+      updateNotificationPreferences.isPending,
     ],
   );
 
@@ -184,9 +238,9 @@ export function AllExpensesScreen({ navigation }: AllExpensesScreenProps) {
         </View>
       ) : (
         <FlashList
-          data={expenses}
+          data={expenseRows}
           renderItem={renderItem}
-          keyExtractor={(item) => `${item.source}-${item.id}`}
+          keyExtractor={getExpenseListRowKey}
           style={styles.listContainer}
           contentContainerStyle={styles.list}
           ListHeaderComponent={listHeader}

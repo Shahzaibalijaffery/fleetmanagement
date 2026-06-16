@@ -8,10 +8,12 @@ import {
   AppStatusBar,
   AppText,
   Button,
+  DateInput,
   Input,
   ScreenContainer,
   ScreenHeader,
 } from '@/shared/components';
+import { endOfToday } from '@/shared/utils/dateInput';
 import { getErrorMessage } from '@/shared/utils/getErrorMessage';
 import type { MainStackParamList } from '@/app/navigation/types';
 
@@ -31,6 +33,7 @@ export function AddCarExpenseScreen({ navigation, route }: AddCarExpenseScreenPr
 
   const { control, handleSubmit } = useForm<CreateExpenseFormValues>({
     resolver: zodResolver(createExpenseFormSchema),
+    mode: 'onBlur',
     defaultValues: {
       expenseDate: todayDateInputValue(),
       visitTitle: '',
@@ -76,13 +79,13 @@ export function AddCarExpenseScreen({ navigation, route }: AddCarExpenseScreenPr
         control={control}
         name="expenseDate"
         render={({ field, fieldState }) => (
-          <Input
+          <DateInput
             label="Date"
-            placeholder="YYYY-MM-DD"
             value={field.value}
-            onChangeText={field.onChange}
+            onChange={field.onChange}
             onBlur={field.onBlur}
             error={fieldState.error?.message}
+            maximumDate={endOfToday()}
           />
         )}
       />

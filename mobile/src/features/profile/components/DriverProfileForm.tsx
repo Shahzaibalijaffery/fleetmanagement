@@ -8,6 +8,10 @@ import { AuthSuccessBanner } from '@/features/auth/components/AuthSuccessBanner'
 import { AppText, Button, Input } from '@/shared/components';
 import { useThemedStyles } from '@/shared/hooks/useThemedStyles';
 import { getErrorMessage } from '@/shared/utils/getErrorMessage';
+import {
+  formatNumericFieldValue,
+  handleIntegerFieldChange,
+} from '@/shared/utils/numericInput';
 
 import { useUpdateProfile } from '../hooks/useUpdateProfile';
 import type { UserProfile } from '../types/profile.types';
@@ -24,6 +28,7 @@ export function DriverProfileForm({ profile }: DriverProfileFormProps) {
 
   const { control, handleSubmit, reset } = useForm<DriverProfileFormValues>({
     resolver: zodResolver(driverProfileSchema),
+    mode: 'onBlur',
     defaultValues: {
       name: profile.name,
       phone: profile.phone ?? '',
@@ -108,11 +113,8 @@ export function DriverProfileForm({ profile }: DriverProfileFormProps) {
         render={({ field, fieldState }) => (
           <Input
             label="Experience (years)"
-            value={String(field.value)}
-            onChangeText={(text) => {
-              const parsed = Number(text);
-              field.onChange(Number.isNaN(parsed) ? 0 : parsed);
-            }}
+            value={formatNumericFieldValue(field.value)}
+            onChangeText={(text) => handleIntegerFieldChange(text, (value) => field.onChange(value ?? 0))}
             onBlur={field.onBlur}
             error={fieldState.error?.message}
             keyboardType="number-pad"

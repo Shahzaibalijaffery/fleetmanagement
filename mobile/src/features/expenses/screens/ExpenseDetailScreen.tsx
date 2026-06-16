@@ -11,13 +11,19 @@ import {
   AppText,
   Button,
   Card,
+  DateInput,
   ErrorState,
   Input,
   ScreenContainer,
   ScreenHeader,
 } from '@/shared/components';
 import { formatExpenseDate, toDateInputValue } from '@/shared/utils/formatExpenseDate';
+import { endOfToday } from '@/shared/utils/dateInput';
 import { formatMoney } from '@/shared/utils/formatMoney';
+import {
+  formatAmountFieldValue,
+  handleAmountFieldChange,
+} from '@/shared/utils/numericInput';
 import { getErrorMessage } from '@/shared/utils/getErrorMessage';
 import { useThemedStyles } from '@/shared/hooks/useThemedStyles';
 import type { MainStackParamList } from '@/app/navigation/types';
@@ -44,6 +50,7 @@ export function ExpenseDetailScreen({ navigation, route }: ExpenseDetailScreenPr
 
   const { control, handleSubmit, reset } = useForm<UpdateExpenseFormValues>({
     resolver: zodResolver(updateExpenseFormSchema),
+    mode: 'onBlur',
     defaultValues: {
       title: '',
       amount: 0,
@@ -136,13 +143,13 @@ export function ExpenseDetailScreen({ navigation, route }: ExpenseDetailScreenPr
           control={control}
           name="expenseDate"
           render={({ field, fieldState }) => (
-            <Input
+            <DateInput
               label="Date"
-              placeholder="YYYY-MM-DD"
               value={field.value}
-              onChangeText={field.onChange}
+              onChange={field.onChange}
               onBlur={field.onBlur}
               error={fieldState.error?.message}
+              maximumDate={endOfToday()}
             />
           )}
         />
@@ -168,8 +175,8 @@ export function ExpenseDetailScreen({ navigation, route }: ExpenseDetailScreenPr
             <Input
               label="Amount"
               keyboardType="numeric"
-              value={field.value === 0 ? '' : String(field.value)}
-              onChangeText={(text) => field.onChange(text === '' ? 0 : Number(text))}
+              value={formatAmountFieldValue(field.value)}
+              onChangeText={(text) => handleAmountFieldChange(text, field.onChange)}
               onBlur={field.onBlur}
               error={fieldState.error?.message}
             />

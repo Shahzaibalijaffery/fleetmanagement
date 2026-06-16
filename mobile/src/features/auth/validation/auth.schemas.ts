@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { personNameSchema, phoneSchema } from '@/shared/validation/field.schemas';
+
 import { USER_ROLES } from '../types/auth.types';
 
 const passwordSchema = z
@@ -16,14 +18,14 @@ export const loginSchema = z.object({
 
 export const registerSchema = z
   .object({
-    name: z.string().trim().min(2, 'Name must be at least 2 characters'),
+    name: personNameSchema,
     email: z.string().trim().email('Invalid email address'),
     password: passwordSchema,
     confirmPassword: z.string().min(1, 'Please confirm your password'),
     role: z.enum(USER_ROLES, {
       errorMap: () => ({ message: 'Select owner or driver' }),
     }),
-    phone: z.string().trim().min(10, 'Phone must be at least 10 digits').optional().or(z.literal('')),
+    phone: z.union([z.literal(''), phoneSchema]).optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Passwords do not match',

@@ -1,5 +1,6 @@
 import { Pressable, Switch, View } from 'react-native';
 
+import { NotificationToggleRow } from '@/features/notification-reminders';
 import { AppText, Button, Card } from '@/shared/components';
 import { useTheme } from '@/shared/theme';
 import { formatMoney } from '@/shared/utils/formatMoney';
@@ -16,6 +17,9 @@ interface ExpenseMonthSummaryProps {
   onIncludeCarExpensesChange: (value: boolean) => void;
   onChangeMonth: () => void;
   onAddSalary: () => void;
+  dailyExpenseReminders?: boolean;
+  onDailyExpenseRemindersChange?: (value: boolean) => void;
+  isUpdatingReminders?: boolean;
 }
 
 function BreakdownRow({
@@ -52,6 +56,9 @@ export function ExpenseMonthSummary({
   onIncludeCarExpensesChange,
   onChangeMonth,
   onAddSalary,
+  dailyExpenseReminders,
+  onDailyExpenseRemindersChange,
+  isUpdatingReminders = false,
 }: ExpenseMonthSummaryProps) {
   const { theme } = useTheme();
   const styles = useThemedStyles(createStyles);
@@ -119,6 +126,16 @@ export function ExpenseMonthSummary({
           accessibilityLabel="Include car repair bills in this month"
         />
       </View>
+
+      {dailyExpenseReminders != null && onDailyExpenseRemindersChange ? (
+        <NotificationToggleRow
+          label="Daily expense reminders (10 & 11 PM)"
+          value={dailyExpenseReminders}
+          disabled={isUpdatingReminders}
+          accessibilityLabel="Daily expense reminders at 10 and 11 PM"
+          onValueChange={onDailyExpenseRemindersChange}
+        />
+      ) : null}
     </Card>
   );
 }

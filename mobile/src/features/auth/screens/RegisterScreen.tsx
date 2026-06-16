@@ -20,6 +20,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
 
   const { control, handleSubmit } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
+    mode: 'onBlur',
     defaultValues: {
       name: '',
       email: '',

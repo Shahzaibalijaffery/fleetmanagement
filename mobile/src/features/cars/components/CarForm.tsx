@@ -5,6 +5,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 
 import { AuthErrorBanner } from '@/features/auth/components/AuthErrorBanner';
 import { AppText, Button, Input } from '@/shared/components';
+import {
+  formatNumericFieldValue,
+  handleIntegerFieldChange,
+} from '@/shared/utils/numericInput';
 import { useThemedStyles } from '@/shared/hooks/useThemedStyles';
 
 import type { Car, CarStatus } from '../types/cars.types';
@@ -35,6 +39,7 @@ export function CarForm({
 
   const { control, handleSubmit, reset, watch, setValue } = useForm<CarFormValues>({
     resolver: zodResolver(carFormSchema),
+    mode: 'onBlur',
     defaultValues: {
       brand: initialCar?.brand ?? '',
       model: initialCar?.model ?? '',
@@ -106,11 +111,8 @@ export function CarForm({
         render={({ field, fieldState }) => (
           <Input
             label="Year"
-            value={String(field.value)}
-            onChangeText={(text) => {
-              const parsed = Number(text);
-              field.onChange(Number.isNaN(parsed) ? 0 : parsed);
-            }}
+            value={formatNumericFieldValue(field.value)}
+            onChangeText={(text) => handleIntegerFieldChange(text, (value) => field.onChange(value ?? 0))}
             onBlur={field.onBlur}
             error={fieldState.error?.message}
             keyboardType="number-pad"

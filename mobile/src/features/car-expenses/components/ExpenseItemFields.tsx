@@ -2,6 +2,10 @@ import { Pressable, View } from 'react-native';
 import { Controller, type Control } from 'react-hook-form';
 
 import { AppText, Input } from '@/shared/components';
+import {
+  formatAmountFieldValue,
+  handleAmountFieldChange,
+} from '@/shared/utils/numericInput';
 import { useThemedStyles } from '@/shared/hooks/useThemedStyles';
 
 import type { CreateExpenseFormValues } from '../validation/car-expense.schemas';
@@ -58,11 +62,8 @@ export function ExpenseItemFields({
         render={({ field, fieldState }) => (
           <Input
             label="Amount"
-            value={field.value === 0 ? '' : String(field.value)}
-            onChangeText={(text) => {
-              const parsed = Number(text);
-              field.onChange(Number.isNaN(parsed) ? 0 : parsed);
-            }}
+            value={formatAmountFieldValue(field.value)}
+            onChangeText={(text) => handleAmountFieldChange(text, field.onChange)}
             onBlur={field.onBlur}
             error={fieldState.error?.message}
             keyboardType="decimal-pad"

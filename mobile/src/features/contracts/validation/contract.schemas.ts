@@ -1,6 +1,14 @@
 import { z } from 'zod';
 
 import {
+  dateInputSchema,
+  mileageIntervalSchema,
+  odometerSchema,
+  requiredRentAmountSchema,
+  requiredTitleSchema,
+} from '@/shared/validation/field.schemas';
+
+import {
   CONTRACT_MODES,
   MAINTENANCE_FREQUENCIES,
   MAINTENANCE_SCHEDULE_TYPES,
@@ -8,18 +16,12 @@ import {
   RESPONSIBILITY_PARTIES,
 } from '../types/contracts.types';
 
-const dateSchema = z
-  .string()
-  .trim()
-  .min(1, 'Date is required')
-  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD format');
-
 const maintenanceItemSchema = z
   .object({
-    title: z.string().trim().min(1, 'Title is required'),
+    title: requiredTitleSchema,
     scheduleType: z.enum(MAINTENANCE_SCHEDULE_TYPES),
     frequency: z.enum(MAINTENANCE_FREQUENCIES).optional(),
-    mileageIntervalKm: z.coerce.number().int().positive().optional(),
+    mileageIntervalKm: mileageIntervalSchema.optional(),
   })
   .superRefine((item, ctx) => {
     if (item.scheduleType === 'time' && !item.frequency) {
@@ -30,7 +32,7 @@ const maintenanceItemSchema = z
       });
     }
 
-    if (item.scheduleType === 'mileage' && !item.mileageIntervalKm) {
+    if (item.scheduleType === 'mileage' && item.mileageIntervalKm == null) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'Mileage interval is required',
@@ -43,13 +45,13 @@ export const contractFormSchema = z
   .object({
     contractMode: z.enum(CONTRACT_MODES),
     paymentFrequency: z.enum(PAYMENT_FREQUENCIES),
-    rentAmount: z.coerce.number().min(0, 'Rent amount cannot be negative'),
-    startDate: dateSchema,
-    endDate: dateSchema,
+    rentAmount: requiredRentAmountSchema,
+    startDate: dateInputSchema,
+    endDate: dateInputSchema,
     fuelResponsibility: z.enum(RESPONSIBILITY_PARTIES),
     maintenanceResponsibility: z.enum(RESPONSIBILITY_PARTIES),
     damageResponsibility: z.enum(RESPONSIBILITY_PARTIES),
-    initialOdometerKm: z.coerce.number().min(0).optional(),
+    initialOdometerKm: odometerSchema.optional(),
     maintenanceChecklist: z.array(maintenanceItemSchema).min(1, 'Add at least one checklist item'),
   })
   .refine((data) => new Date(data.endDate) > new Date(data.startDate), {

@@ -4,6 +4,10 @@ import type { Control, UseFieldArrayRemove } from 'react-hook-form';
 import { Controller, useWatch } from 'react-hook-form';
 
 import { AppText, Input } from '@/shared/components';
+import {
+  formatNumericFieldValue,
+  handleIntegerFieldChange,
+} from '@/shared/utils/numericInput';
 import { useTheme } from '@/shared/theme';
 import { useThemedStyles } from '@/shared/hooks/useThemedStyles';
 
@@ -139,17 +143,8 @@ export const MaintenanceChecklistItemRow = memo(function MaintenanceChecklistIte
           render={({ field, fieldState }) => (
             <Input
               label="Every (km)"
-              value={field.value != null ? String(field.value) : ''}
-              onChangeText={(text) => {
-                if (text === '') {
-                  field.onChange(undefined);
-                  return;
-                }
-                const parsed = Number(text);
-                if (!Number.isNaN(parsed)) {
-                  field.onChange(parsed);
-                }
-              }}
+              value={formatNumericFieldValue(field.value)}
+              onChangeText={(text) => handleIntegerFieldChange(text, field.onChange)}
               onBlur={field.onBlur}
               keyboardType="number-pad"
               placeholder="5000"

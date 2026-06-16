@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { View } from 'react-native';
+import { zodResolver } from '@hookform/resolvers/zod';
 
 import { AuthErrorBanner } from '@/features/auth/components/AuthErrorBanner';
 import type { PersonalMaintenanceChecklistItem } from '@/features/cars/types/cars.types';
@@ -11,12 +13,19 @@ import {
   type MaintenanceFrequency,
   type MaintenanceScheduleType,
 } from '@/features/contracts/types/contracts.types';
-import { AppModal, AppText, Button, Input } from '@/shared/components';
+import { AppModal, AppText, Button, DateInput, Input } from '@/shared/components';
 import { toDateInputValue } from '@/shared/utils/formatExpenseDate';
+import { endOfToday } from '@/shared/utils/dateInput';
 import { getErrorMessage } from '@/shared/utils/getErrorMessage';
+import { sanitizeIntegerInput } from '@/shared/utils/numericInput';
 import { useThemedStyles } from '@/shared/hooks/useThemedStyles';
 
 import { computePersonalMaintenancePreview } from '../utils/maintenanceSchedulePreview';
+import {
+  editMaintenanceItemFormSchema,
+  resolveEditMaintenanceValues,
+  type EditMaintenanceItemFormValues,
+} from '../validation/maintenance-modal.schemas';
 import { MaintenanceOptionChips } from './MaintenanceOptionChips';
 import { createStyles } from './EditMaintenanceItemModal.styles';
 
@@ -50,37 +59,48 @@ export function EditMaintenanceItemModal({
   onSave,
 }: EditMaintenanceItemModalProps) {
   const styles = useThemedStyles(createStyles);
-  const [scheduleType, setScheduleType] = useState<MaintenanceScheduleType>('mileage');
-  const [frequency, setFrequency] = useState<MaintenanceFrequency>('monthly');
-  const [mileageIntervalKm, setMileageIntervalKm] = useState('');
-  const [lastCompletedAt, setLastCompletedAt] = useState('');
-  const [lastCompletedOdometerKm, setLastCompletedOdometerKm] = useState('');
-  const [odometerError, setOdometerError] = useState<string | undefined>();
+
+  const { control, handleSubmit, reset, watch, setValue } = useForm<EditMaintenanceItemFormValues>({
+    resolver: zodResolver(editMaintenanceItemFormSchema),
+    mode: 'onBlur',
+    defaultValues: {
+      scheduleType: 'mileage',
+      frequency: 'monthly',
+      mileageIntervalKm: '5000',
+      lastCompletedAt: '',
+      lastCompletedOdometerKm: '',
+    },
+  });
+
+  const scheduleType = watch('scheduleType');
+  const frequency = watch('frequency');
+  const mileageIntervalKm = watch('mileageIntervalKm');
+  const lastCompletedAt = watch('lastCompletedAt');
+  const lastCompletedOdometerKm = watch('lastCompletedOdometerKm');
 
   useEffect(() => {
     if (!visible || !item) {
       return;
     }
 
-    setScheduleType(item.scheduleType);
-    setFrequency(item.frequency ?? 'monthly');
-    setMileageIntervalKm(
-      item.mileageIntervalKm != null ? String(item.mileageIntervalKm) : '5000',
-    );
-    setLastCompletedAt(item.lastCompletedAt ? toDateInputValue(item.lastCompletedAt) : '');
-    setLastCompletedOdometerKm(
-      item.lastCompletedOdometerKm != null
-        ? String(item.lastCompletedOdometerKm)
-        : item.lastCompletedAt
-          ? String(odometerKm)
-          : '',
-    );
-    setOdometerError(undefined);
-  }, [visible, item, odometerKm]);
+    reset({
+      scheduleType: item.scheduleType,
+      frequency: item.frequency ?? 'monthly',
+      mileageIntervalKm:
+        item.mileageIntervalKm != null ? String(item.mileageIntervalKm) : '5000',
+      lastCompletedAt: item.lastCompletedAt ? toDateInputValue(item.lastCompletedAt) : '',
+      lastCompletedOdometerKm:
+        item.lastCompletedOdometerKm != null
+          ? String(item.lastCompletedOdometerKm)
+          : item.lastCompletedAt
+            ? String(odometerKm)
+            : '',
+    });
+  }, [visible, item, odometerKm, reset]);
 
   const parsedMileageInterval = Number(mileageIntervalKm);
   const parsedLastOdometer =
-    lastCompletedOdometerKm.trim() === '' ? null : Number(lastCompletedOdometerKm);
+    lastCompletedOdometerKm?.trim() === '' ? null : Number(lastCompletedOdometerKm);
 
   const nextDuePreview = useMemo(() => {
     if (!item) {
@@ -89,12 +109,12 @@ export function EditMaintenanceItemModal({
 
     return computePersonalMaintenancePreview({
       scheduleType,
-      frequency: scheduleType === 'time' ? frequency : null,
+      frequency: scheduleType === 'time' ? (frequency ?? 'monthly') : null,
       mileageIntervalKm:
         scheduleType === 'mileage' && !Number.isNaN(parsedMileageInterval)
           ? parsedMileageInterval
           : null,
-      lastCompletedAt: lastCompletedAt.trim() || null,
+      lastCompletedAt: lastCompletedAt?.trim() || null,
       lastCompletedOdometerKm:
         parsedLastOdometer != null && !Number.isNaN(parsedLastOdometer) ? parsedLastOdometer : null,
       odometerKm,
@@ -111,37 +131,12 @@ export function EditMaintenanceItemModal({
     carCreatedAt,
   ]);
 
-  const handleSave = () => {
+  const onSubmit = (values: EditMaintenanceItemFormValues) => {
     if (!item) {
       return;
     }
 
-    if (scheduleType === 'mileage' && (Number.isNaN(parsedMileageInterval) || parsedMileageInterval <= 0)) {
-      return;
-    }
-
-    const trimmedDate = lastCompletedAt.trim();
-    let resolvedLastOdometer: number | null | undefined;
-
-    if (scheduleType === 'mileage') {
-      if (trimmedDate) {
-        if (parsedLastOdometer == null || Number.isNaN(parsedLastOdometer)) {
-          setOdometerError('Odometer at last change is required');
-          return;
-        }
-        resolvedLastOdometer = parsedLastOdometer;
-      } else {
-        resolvedLastOdometer = null;
-      }
-    }
-
-    onSave({
-      scheduleType,
-      frequency: scheduleType === 'time' ? frequency : undefined,
-      mileageIntervalKm: scheduleType === 'mileage' ? parsedMileageInterval : undefined,
-      lastCompletedAt: trimmedDate || null,
-      lastCompletedOdometerKm: resolvedLastOdometer,
-    });
+    onSave(resolveEditMaintenanceValues(values));
   };
 
   if (!item) {
@@ -161,47 +156,66 @@ export function EditMaintenanceItemModal({
         options={MAINTENANCE_SCHEDULE_TYPES}
         selected={scheduleType}
         getLabel={(value) => MAINTENANCE_SCHEDULE_LABELS[value]}
-        onSelect={setScheduleType}
+        onSelect={(value) => setValue('scheduleType', value, { shouldValidate: true })}
       />
 
       {scheduleType === 'time' ? (
         <MaintenanceOptionChips
           label="Repeat every"
           options={MAINTENANCE_FREQUENCIES}
-          selected={frequency}
+          selected={frequency ?? 'monthly'}
           getLabel={(value) => MAINTENANCE_FREQUENCY_LABELS[value]}
-          onSelect={setFrequency}
+          onSelect={(value) => setValue('frequency', value, { shouldValidate: true })}
         />
       ) : (
-        <Input
-          label="Every (km)"
-          placeholder="5000"
-          keyboardType="number-pad"
-          value={mileageIntervalKm}
-          onChangeText={setMileageIntervalKm}
+        <Controller
+          control={control}
+          name="mileageIntervalKm"
+          render={({ field, fieldState }) => (
+            <Input
+              label="Every (km)"
+              placeholder="5000"
+              keyboardType="number-pad"
+              value={field.value ?? ''}
+              onChangeText={(value) => field.onChange(sanitizeIntegerInput(value))}
+              onBlur={field.onBlur}
+              error={fieldState.error?.message}
+            />
+          )}
         />
       )}
 
-      <Input
-        label="Last done date"
-        placeholder="YYYY-MM-DD"
-        value={lastCompletedAt}
-        onChangeText={setLastCompletedAt}
+      <Controller
+        control={control}
+        name="lastCompletedAt"
+        render={({ field, fieldState }) => (
+          <DateInput
+            label="Last done date"
+            value={field.value ?? ''}
+            onChange={field.onChange}
+            onBlur={field.onBlur}
+            error={fieldState.error?.message}
+            maximumDate={endOfToday()}
+            placeholder="Optional"
+          />
+        )}
       />
 
       {scheduleType === 'mileage' ? (
-        <Input
-          label="Odometer at last change (km)"
-          placeholder={String(odometerKm)}
-          keyboardType="number-pad"
-          value={lastCompletedOdometerKm}
-          onChangeText={(value) => {
-            setLastCompletedOdometerKm(value);
-            if (odometerError) {
-              setOdometerError(undefined);
-            }
-          }}
-          error={odometerError}
+        <Controller
+          control={control}
+          name="lastCompletedOdometerKm"
+          render={({ field, fieldState }) => (
+            <Input
+              label="Odometer at last change (km)"
+              placeholder={String(odometerKm)}
+              keyboardType="number-pad"
+              value={field.value ?? ''}
+              onChangeText={(value) => field.onChange(sanitizeIntegerInput(value))}
+              onBlur={field.onBlur}
+              error={fieldState.error?.message}
+            />
+          )}
         />
       ) : null}
 
@@ -216,7 +230,7 @@ export function EditMaintenanceItemModal({
         </View>
       ) : null}
 
-      <Button title="Save" onPress={handleSave} loading={isSubmitting} fullWidth />
+      <Button title="Save" onPress={handleSubmit(onSubmit)} loading={isSubmitting} fullWidth />
       <Button title="Cancel" onPress={onClose} variant="ghost" fullWidth />
     </AppModal>
   );

@@ -5,7 +5,13 @@ export function parseOdometerInput(input: string, fallback: number): number {
     return fallback;
   }
 
-  const parsed = Number(trimmed);
+  const sanitized = trimmed.replace(/\D/g, '');
+
+  if (sanitized === '') {
+    return fallback;
+  }
+
+  const parsed = Number(sanitized);
 
   if (Number.isNaN(parsed)) {
     return fallback;

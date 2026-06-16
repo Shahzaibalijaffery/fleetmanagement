@@ -48,6 +48,7 @@ export function EditPersonalMaintenanceScreen({
   const { control, handleSubmit, reset } =
     useForm<PersonalMaintenanceFormValues>({
       resolver: zodResolver(personalMaintenanceFormSchema),
+      mode: 'onBlur',
       defaultValues: {
         personalMaintenanceChecklist: [],
       },

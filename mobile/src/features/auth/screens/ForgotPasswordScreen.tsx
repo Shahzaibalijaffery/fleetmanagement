@@ -27,6 +27,7 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordScreenProps) 
 
   const { control, handleSubmit, reset } = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),
+    mode: 'onBlur',
     defaultValues: { email: '' },
   });
 

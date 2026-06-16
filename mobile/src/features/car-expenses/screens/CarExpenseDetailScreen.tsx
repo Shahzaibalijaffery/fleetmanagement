@@ -11,12 +11,14 @@ import {
   AppText,
   Button,
   Card,
+  DateInput,
   ErrorState,
   Input,
   ScreenContainer,
   ScreenHeader,
 } from '@/shared/components';
 import { getErrorMessage } from '@/shared/utils/getErrorMessage';
+import { endOfToday } from '@/shared/utils/dateInput';
 import type { MainStackParamList } from '@/app/navigation/types';
 import { useThemedStyles } from '@/shared/hooks/useThemedStyles';
 
@@ -28,6 +30,10 @@ import { useUpdateCarExpense } from '../hooks/useUpdateCarExpense';
 import { useUpdateCarExpenseItem } from '../hooks/useUpdateCarExpenseItem';
 import type { CarExpenseItem } from '../types/car-expenses.types';
 import { formatMoney } from '@/shared/utils/formatMoney';
+import {
+  formatAmountFieldValue,
+  handleAmountFieldChange,
+} from '@/shared/utils/numericInput';
 import { toDateInputValue } from '../utils/formatExpenseDate';
 import {
   addExpenseItemFormSchema,
@@ -61,16 +67,19 @@ export function CarExpenseDetailScreen({ navigation, route }: CarExpenseDetailSc
 
   const visitForm = useForm<UpdateExpenseVisitFormValues>({
     resolver: zodResolver(updateExpenseVisitFormSchema),
+    mode: 'onBlur',
     defaultValues: { expenseDate: '', visitTitle: '' },
   });
 
   const addItemForm = useForm<AddExpenseItemFormValues>({
     resolver: zodResolver(addExpenseItemFormSchema),
+    mode: 'onBlur',
     defaultValues: { title: '', amount: 0 },
   });
 
   const editItemForm = useForm<EditExpenseItemFormValues>({
     resolver: zodResolver(expenseItemSchema),
+    mode: 'onBlur',
     defaultValues: { title: '', amount: 0 },
   });
 
@@ -192,13 +201,13 @@ export function CarExpenseDetailScreen({ navigation, route }: CarExpenseDetailSc
           control={visitForm.control}
           name="expenseDate"
           render={({ field, fieldState }) => (
-            <Input
+            <DateInput
               label="Date"
-              placeholder="YYYY-MM-DD"
               value={field.value}
-              onChangeText={field.onChange}
+              onChange={field.onChange}
               onBlur={field.onBlur}
               error={fieldState.error?.message}
+              maximumDate={endOfToday()}
             />
           )}
         />
@@ -290,11 +299,8 @@ export function CarExpenseDetailScreen({ navigation, route }: CarExpenseDetailSc
           render={({ field, fieldState }) => (
             <Input
               label="Amount"
-              value={field.value === 0 ? '' : String(field.value)}
-              onChangeText={(text) => {
-                const parsed = Number(text);
-                field.onChange(Number.isNaN(parsed) ? 0 : parsed);
-              }}
+              value={formatAmountFieldValue(field.value)}
+              onChangeText={(text) => handleAmountFieldChange(text, field.onChange)}
               onBlur={field.onBlur}
               error={fieldState.error?.message}
               keyboardType="decimal-pad"
@@ -343,11 +349,8 @@ export function CarExpenseDetailScreen({ navigation, route }: CarExpenseDetailSc
           render={({ field, fieldState }) => (
             <Input
               label="Amount"
-              value={field.value === 0 ? '' : String(field.value)}
-              onChangeText={(text) => {
-                const parsed = Number(text);
-                field.onChange(Number.isNaN(parsed) ? 0 : parsed);
-              }}
+              value={formatAmountFieldValue(field.value)}
+              onChangeText={(text) => handleAmountFieldChange(text, field.onChange)}
               onBlur={field.onBlur}
               error={fieldState.error?.message}
               keyboardType="decimal-pad"

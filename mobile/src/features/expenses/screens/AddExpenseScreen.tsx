@@ -5,13 +5,19 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthErrorBanner } from '@/features/auth/components/AuthErrorBanner';
 import { todayDateInputValue } from '@/shared/utils/formatExpenseDate';
 import {
+  formatAmountFieldValue,
+  handleAmountFieldChange,
+} from '@/shared/utils/numericInput';
+import {
   AppStatusBar,
   AppText,
   Button,
+  DateInput,
   Input,
   ScreenContainer,
   ScreenHeader,
 } from '@/shared/components';
+import { endOfToday } from '@/shared/utils/dateInput';
 import { getErrorMessage } from '@/shared/utils/getErrorMessage';
 import type { MainStackParamList } from '@/app/navigation/types';
 
@@ -28,6 +34,7 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
 
   const { control, handleSubmit } = useForm<CreateExpenseFormValues>({
     resolver: zodResolver(createExpenseFormSchema),
+    mode: 'onBlur',
     defaultValues: {
       title: '',
       amount: 0,
@@ -69,13 +76,13 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
         control={control}
         name="expenseDate"
         render={({ field, fieldState }) => (
-          <Input
+          <DateInput
             label="Date"
-            placeholder="YYYY-MM-DD"
             value={field.value}
-            onChangeText={field.onChange}
+            onChange={field.onChange}
             onBlur={field.onBlur}
             error={fieldState.error?.message}
+            maximumDate={endOfToday()}
           />
         )}
       />
@@ -103,8 +110,8 @@ export function AddExpenseScreen({ navigation }: AddExpenseScreenProps) {
             label="Amount"
             placeholder="0"
             keyboardType="numeric"
-            value={field.value === 0 ? '' : String(field.value)}
-            onChangeText={(text) => field.onChange(text === '' ? 0 : Number(text))}
+            value={formatAmountFieldValue(field.value)}
+            onChangeText={(text) => handleAmountFieldChange(text, field.onChange)}
             onBlur={field.onBlur}
             error={fieldState.error?.message}
           />

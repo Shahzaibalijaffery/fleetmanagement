@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { mileageIntervalSchema, requiredTitleSchema } from '@/shared/validation/field.schemas';
+
 import {
   MAINTENANCE_FREQUENCIES,
   MAINTENANCE_SCHEDULE_TYPES,
@@ -7,10 +9,10 @@ import {
 
 const maintenanceItemSchema = z
   .object({
-    title: z.string().trim().min(1, 'Title is required'),
+    title: requiredTitleSchema,
     scheduleType: z.enum(MAINTENANCE_SCHEDULE_TYPES),
     frequency: z.enum(MAINTENANCE_FREQUENCIES).optional(),
-    mileageIntervalKm: z.coerce.number().int().positive().optional(),
+    mileageIntervalKm: mileageIntervalSchema.optional(),
   })
   .superRefine((item, ctx) => {
     if (item.scheduleType === 'time' && !item.frequency) {
@@ -21,7 +23,7 @@ const maintenanceItemSchema = z
       });
     }
 
-    if (item.scheduleType === 'mileage' && !item.mileageIntervalKm) {
+    if (item.scheduleType === 'mileage' && item.mileageIntervalKm == null) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'Mileage interval is required for mileage-based items',

@@ -4,7 +4,12 @@ import { View } from 'react-native';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 import { AuthErrorBanner } from '@/features/auth/components/AuthErrorBanner';
-import { AppText, Button, Input } from '@/shared/components';
+import { AppText, Button, DateInput, Input } from '@/shared/components';
+import {
+  formatAmountFieldValue,
+  handleAmountFieldChange,
+} from '@/shared/utils/numericInput';
+import { dateInputToDate } from '@/shared/utils/dateInput';
 import { useThemedStyles } from '@/shared/hooks/useThemedStyles';
 
 import type { Contract } from '../types/contracts.types';
@@ -52,10 +57,10 @@ export function ContractForm({
 }: ContractFormProps) {
   const styles = useThemedStyles(createStyles);
 
-  const { control, handleSubmit, reset } = useForm<ContractFormValues>({
+  const { control, handleSubmit, reset, watch } = useForm<ContractFormValues>({
     resolver: zodResolver(contractFormSchema),
-    mode: 'onSubmit',
-    reValidateMode: 'onSubmit',
+    mode: 'onBlur',
+    reValidateMode: 'onChange',
     defaultValues: {
       contractMode: initialContract?.contractMode ?? 'daily_shift',
       paymentFrequency: initialContract?.paymentFrequency ?? 'weekly',
@@ -93,6 +98,9 @@ export function ContractForm({
       });
     }
   }, [initialContract, reset]);
+
+  const startDate = watch('startDate');
+  const endDateMinimum = startDate ? dateInputToDate(startDate) : undefined;
 
   return (
     <View style={styles.form}>
@@ -134,16 +142,8 @@ export function ContractForm({
         render={({ field, fieldState }) => (
           <Input
             label="Rent amount"
-            value={String(field.value ?? '')}
-            onChangeText={(text) => {
-              if (text === '') {
-                return;
-              }
-              const parsed = Number(text);
-              if (!Number.isNaN(parsed)) {
-                field.onChange(parsed);
-              }
-            }}
+            value={formatAmountFieldValue(field.value)}
+            onChangeText={(text) => handleAmountFieldChange(text, field.onChange)}
             onBlur={field.onBlur}
             error={fieldState.error?.message}
             keyboardType="number-pad"
@@ -155,14 +155,12 @@ export function ContractForm({
         control={control}
         name="startDate"
         render={({ field, fieldState }) => (
-          <Input
+          <DateInput
             label="Start date"
             value={field.value}
-            onChangeText={field.onChange}
+            onChange={field.onChange}
             onBlur={field.onBlur}
             error={fieldState.error?.message}
-            placeholder="YYYY-MM-DD"
-            autoCapitalize="none"
           />
         )}
       />
@@ -171,14 +169,13 @@ export function ContractForm({
         control={control}
         name="endDate"
         render={({ field, fieldState }) => (
-          <Input
+          <DateInput
             label="End date"
             value={field.value}
-            onChangeText={field.onChange}
+            onChange={field.onChange}
             onBlur={field.onBlur}
             error={fieldState.error?.message}
-            placeholder="YYYY-MM-DD"
-            autoCapitalize="none"
+            minimumDate={endDateMinimum}
           />
         )}
       />

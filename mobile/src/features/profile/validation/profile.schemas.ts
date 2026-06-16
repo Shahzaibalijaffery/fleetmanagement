@@ -1,19 +1,22 @@
 import { z } from 'zod';
 
+import {
+  citySchema,
+  experienceYearsSchema,
+  personNameSchema,
+  phoneSchema,
+} from '@/shared/validation/field.schemas';
+
 const baseProfileSchema = z.object({
-  name: z.string().trim().min(2, 'Name must be at least 2 characters'),
-  phone: z.string().trim().min(10, 'Phone must be at least 10 digits'),
-  city: z.string().trim().min(2, 'City must be at least 2 characters'),
+  name: personNameSchema,
+  phone: phoneSchema,
+  city: citySchema,
 });
 
 export const ownerProfileSchema = baseProfileSchema;
 
 export const driverProfileSchema = baseProfileSchema.extend({
-  experience: z.coerce
-    .number({ invalid_type_error: 'Experience is required' })
-    .int('Experience must be a whole number')
-    .min(0, 'Experience cannot be negative')
-    .max(50, 'Experience cannot exceed 50 years'),
+  experience: experienceYearsSchema,
 });
 
 export type OwnerProfileFormValues = z.infer<typeof ownerProfileSchema>;

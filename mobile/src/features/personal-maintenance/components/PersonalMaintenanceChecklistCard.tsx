@@ -1,6 +1,7 @@
 import { Pressable, View } from 'react-native';
 
 import type { PersonalMaintenanceChecklistItem } from '@/features/cars/types/cars.types';
+import { NotificationToggleRow } from '@/features/notification-reminders';
 import { MAINTENANCE_FREQUENCY_LABELS } from '@/features/contracts/types/contracts.types';
 import { AppText, Badge, Button } from '@/shared/components';
 import { useThemedStyles } from '@/shared/hooks/useThemedStyles';
@@ -17,6 +18,10 @@ interface PersonalMaintenanceChecklistCardProps {
   isCompleting: boolean;
   onEdit: () => void;
   onComplete: () => void;
+  reminderEnabled?: boolean;
+  reminderLabel?: string;
+  onReminderChange?: (value: boolean) => void;
+  isUpdatingReminder?: boolean;
 }
 
 export function PersonalMaintenanceChecklistCard({
@@ -24,6 +29,10 @@ export function PersonalMaintenanceChecklistCard({
   isCompleting,
   onEdit,
   onComplete,
+  reminderEnabled,
+  reminderLabel,
+  onReminderChange,
+  isUpdatingReminder = false,
 }: PersonalMaintenanceChecklistCardProps) {
   const styles = useThemedStyles(createStyles);
 
@@ -68,6 +77,16 @@ export function PersonalMaintenanceChecklistCard({
       <View style={styles.itemActions}>
         <Button title="Mark complete" onPress={onComplete} loading={isCompleting} size="sm" />
       </View>
+
+      {reminderEnabled != null && reminderLabel && onReminderChange ? (
+        <NotificationToggleRow
+          label={reminderLabel}
+          value={reminderEnabled}
+          disabled={isUpdatingReminder}
+          accessibilityLabel={reminderLabel}
+          onValueChange={onReminderChange}
+        />
+      ) : null}
     </View>
   );
 }

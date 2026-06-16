@@ -19,6 +19,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
 
   const { control, handleSubmit } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
+    mode: 'onBlur',
     defaultValues: { email: '', password: '' },
   });
 

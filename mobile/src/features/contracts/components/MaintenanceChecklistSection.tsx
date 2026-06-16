@@ -4,6 +4,8 @@ import { View } from 'react-native';
 import { AuthErrorBanner } from '@/features/auth/components/AuthErrorBanner';
 import { AppText, Badge, Button, Card, Input } from '@/shared/components';
 import { getErrorMessage } from '@/shared/utils/getErrorMessage';
+import { sanitizeIntegerInput } from '@/shared/utils/numericInput';
+import { odometerUpdateFormSchema } from '@/shared/validation/field.schemas';
 import { useThemedStyles } from '@/shared/hooks/useThemedStyles';
 
 import { useCompleteMaintenanceItem } from '../hooks/useCompleteMaintenanceItem';
@@ -48,6 +50,7 @@ function formatDueText(item: MaintenanceChecklistItem): string {
 export function MaintenanceChecklistSection({ contract }: MaintenanceChecklistSectionProps) {
   const styles = useThemedStyles(createStyles);
   const [odometerInput, setOdometerInput] = useState(String(contract.currentOdometerKm));
+  const [odometerError, setOdometerError] = useState<string | undefined>();
   const [completingItemId, setCompletingItemId] = useState<string | null>(null);
   const updateOdometer = useUpdateContractOdometer(contract.id);
   const completeItem = useCompleteMaintenanceItem(contract.id);
@@ -59,6 +62,14 @@ export function MaintenanceChecklistSection({ contract }: MaintenanceChecklistSe
   }, [contract.currentOdometerKm]);
 
   const handleUpdateOdometer = () => {
+    const result = odometerUpdateFormSchema.safeParse({ odometer: odometerInput });
+
+    if (!result.success) {
+      setOdometerError(result.error.issues[0]?.message ?? 'Enter a valid odometer reading');
+      return;
+    }
+
+    setOdometerError(undefined);
     const parsed = parseOdometerInput(odometerInput, contract.currentOdometerKm);
     updateOdometer.mutate(parsed);
   };
@@ -97,8 +108,14 @@ export function MaintenanceChecklistSection({ contract }: MaintenanceChecklistSe
         <Input
           label="Current odometer (km)"
           value={odometerInput}
-          onChangeText={setOdometerInput}
+          onChangeText={(value) => {
+            setOdometerInput(sanitizeIntegerInput(value));
+            if (odometerError) {
+              setOdometerError(undefined);
+            }
+          }}
           keyboardType="number-pad"
+          error={odometerError}
         />
         <Button
           title="Update mileage"

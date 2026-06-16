@@ -1,13 +1,26 @@
 import { z } from 'zod';
 
+import {
+  nonNegativeAmountSchema,
+  optionalNotesSchema,
+  pastOrTodayDateSchema,
+  requiredAmountSchema,
+  requiredTitleSchema,
+} from '@/shared/validation/field.schemas';
+
 export const createExpenseFormSchema = z.object({
-  title: z.string().trim().min(1, 'Title is required'),
-  amount: z.coerce.number().min(0, 'Amount must be 0 or greater'),
-  expenseDate: z.string().trim().min(1, 'Expense date is required'),
-  notes: z.string().trim().optional(),
+  title: requiredTitleSchema,
+  amount: requiredAmountSchema,
+  expenseDate: pastOrTodayDateSchema,
+  notes: optionalNotesSchema,
 });
 
 export const updateExpenseFormSchema = createExpenseFormSchema;
 
+export const monthlySalaryFormSchema = z.object({
+  amount: nonNegativeAmountSchema,
+});
+
 export type CreateExpenseFormValues = z.infer<typeof createExpenseFormSchema>;
 export type UpdateExpenseFormValues = z.infer<typeof updateExpenseFormSchema>;
+export type MonthlySalaryFormValues = z.infer<typeof monthlySalaryFormSchema>;
