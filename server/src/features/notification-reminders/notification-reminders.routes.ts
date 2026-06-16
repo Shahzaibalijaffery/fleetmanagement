@@ -12,14 +12,14 @@ const router = Router();
 router.get(
   '/preferences',
   authenticate,
-  authorize('owner'),
+  authorize('owner', 'driver'),
   notificationRemindersController.getPreferences,
 );
 
 router.patch(
   '/preferences',
   authenticate,
-  authorize('owner'),
+  authorize('owner', 'driver'),
   validate(updateNotificationPreferencesSchema),
   notificationRemindersController.updatePreferences,
 );

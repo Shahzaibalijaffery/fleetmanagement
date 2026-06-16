@@ -6,6 +6,9 @@ import {
 } from '../../shared/errors/AppError';
 import { buildMeta } from '../../shared/types/pagination.types';
 import { assignmentsRepository } from '../assignments/assignments.repository';
+import { expensesService } from '../expenses/expenses.service';
+import { notificationRemindersService } from '../notification-reminders/notification-reminders.service';
+import { daysSince } from '../notification-reminders/notification-reminders.utils';
 import { paymentsService } from '../payments/payments.service';
 
 import type {
@@ -327,6 +330,7 @@ export const contractsService = {
     role: 'owner' | 'driver',
     contractId: string,
     itemId: string,
+    cost = 0,
     currentOdometerKm?: number,
   ): Promise<Contract> {
     const contract = await contractsRepository.findById(contractId);
@@ -346,6 +350,12 @@ export const contractsService = {
 
     const completedAt = new Date();
 
+    if (item.lastCompletedAt && daysSince(item.lastCompletedAt, completedAt) === 0) {
+      throw new ValidationError('This maintenance was already marked complete today');
+    }
+
+    const carId = contract.carId._id.toString();
+
     if (item.scheduleType === 'time') {
       const updated = await contractsRepository.completeTimeMaintenanceItem(
         contractId,
@@ -356,6 +366,18 @@ export const contractsService = {
       if (!updated) {
         throw new NotFoundError('Maintenance item not found');
       }
+
+      if (cost > 0) {
+        await expensesService.createRunningCostExpense(userId, {
+          carId,
+          maintenanceItemId: itemId,
+          title: item.title,
+          amount: cost,
+          expenseDate: completedAt.toISOString(),
+        });
+      }
+
+      await notificationRemindersService.resetMaintenanceReminders(carId, itemId);
 
       return toContract(updated);
     }
@@ -384,6 +406,18 @@ export const contractsService = {
     if (!updated) {
       throw new NotFoundError('Maintenance item not found');
     }
+
+    if (cost > 0) {
+      await expensesService.createRunningCostExpense(userId, {
+        carId,
+        maintenanceItemId: itemId,
+        title: item.title,
+        amount: cost,
+        expenseDate: completedAt.toISOString(),
+      });
+    }
+
+    await notificationRemindersService.resetMaintenanceReminders(carId, itemId);
 
     return toContract(updated);
   },

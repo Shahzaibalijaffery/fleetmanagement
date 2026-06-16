@@ -96,6 +96,7 @@ export const contractsController = {
         req.user!.role as UserRole,
         String(req.params.contractId),
         String(req.params.itemId),
+        req.body?.cost,
         req.body?.currentOdometerKm,
       );
       res.json({ data: contract });

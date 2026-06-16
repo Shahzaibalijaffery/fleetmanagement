@@ -6,6 +6,7 @@ import {
 import { buildMeta } from '../../shared/types/pagination.types';
 import { carExpensesRepository } from '../car-expenses/car-expenses.repository';
 import type { CarExpenseLogDocument } from '../car-expenses/car-expenses.types';
+import { getLocalDayRange } from '../notification-reminders/notification-reminders.utils';
 
 import { monthlySalaryRepository } from './monthly-salary.repository';
 import { expensesRepository } from './expenses.repository';
@@ -160,14 +161,17 @@ function toMonthlySalary(record: MonthlySalaryDocument): MonthlySalary {
 export const expensesService = {
   async listExpenses(ownerId: string, query: ListExpensesQuery) {
     const { start, end } = getMonthDateRange({ year: query.year, month: query.month });
+    const expenseSources: Array<'general' | 'running_cost'> = query.includeCarExpenses
+      ? ['general', 'running_cost']
+      : ['general'];
 
     const [generalExpenses, carLogs, generalTotalResult, carTotalResult, salaryRecord] =
       await Promise.all([
-      expensesRepository.findByOwnerIdInRange(ownerId, start, end),
+      expensesRepository.findByOwnerIdInRange(ownerId, start, end, expenseSources),
       query.includeCarExpenses
         ? carExpensesRepository.findByOwnerIdInRange(ownerId, start, end)
         : [],
-      expensesRepository.sumTotalByOwnerIdInRange(ownerId, start, end),
+      expensesRepository.sumTotalByOwnerIdInRange(ownerId, start, end, expenseSources),
       query.includeCarExpenses
         ? carExpensesRepository.sumTotalByOwnerIdInRange(ownerId, start, end)
         : Promise.resolve([]),
@@ -228,6 +232,21 @@ export const expensesService = {
   },
 
   async createRunningCostExpense(ownerId: string, input: CreateRunningCostExpenseInput) {
+    const expenseDate = new Date(input.expenseDate);
+    const { start, end } = getLocalDayRange(expenseDate);
+
+    const alreadyRecorded = await expensesRepository.existsRunningCostForMaintenanceInRange(
+      ownerId,
+      input.carId,
+      input.maintenanceItemId,
+      start,
+      end,
+    );
+
+    if (alreadyRecorded) {
+      throw new ValidationError('This maintenance cost was already recorded today');
+    }
+
     const expense = await expensesRepository.createRunningCost(ownerId, input);
     return toExpense(expense.toObject() as ExpenseDocument);
   },

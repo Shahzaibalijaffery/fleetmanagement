@@ -102,6 +102,7 @@ export const completeMaintenanceItemSchema = z.object({
   }),
   body: z
     .object({
+      cost: z.coerce.number().positive('Enter a valid cost').optional(),
       currentOdometerKm: z.coerce.number().min(0).optional(),
     })
     .optional()

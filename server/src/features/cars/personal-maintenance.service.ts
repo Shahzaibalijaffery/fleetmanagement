@@ -2,6 +2,7 @@ import { NotFoundError, ValidationError } from '../../shared/errors/AppError';
 
 import { expensesService } from '../expenses/expenses.service';
 import { notificationRemindersService } from '../notification-reminders/notification-reminders.service';
+import { daysSince } from '../notification-reminders/notification-reminders.utils';
 
 import { toCar } from './cars.mapper';
 import { carsRepository } from './cars.repository';
@@ -146,6 +147,11 @@ export const personalMaintenanceService = {
     }
 
     const completedAt = new Date();
+
+    if (item.lastCompletedAt && daysSince(item.lastCompletedAt, completedAt) === 0) {
+      throw new ValidationError('This maintenance was already marked complete today');
+    }
+
     let updated: CarDocument | null;
 
     if (item.scheduleType === 'time') {

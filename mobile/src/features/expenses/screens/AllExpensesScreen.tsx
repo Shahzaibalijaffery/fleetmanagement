@@ -8,6 +8,7 @@ import {
   useUpdateNotificationPreferences,
 } from '@/features/notification-reminders';
 import { env } from '@/shared/config/env';
+import { useAuthStore } from '@/stores/auth.store';
 
 import {
   AppStatusBar,
@@ -40,6 +41,8 @@ type AllExpensesScreenProps = NativeStackScreenProps<MainStackParamList, 'AllExp
 
 export function AllExpensesScreen({ navigation }: AllExpensesScreenProps) {
   const styles = useThemedStyles(createStyles);
+  const user = useAuthStore((state) => state.user);
+  const isOwner = user?.role === 'owner';
   const [includeCarExpenses, setIncludeCarExpenses] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(getCurrentExpenseMonth);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
@@ -144,7 +147,8 @@ export function AllExpensesScreen({ navigation }: AllExpensesScreenProps) {
           includeCarExpenses={includeCarExpenses}
           onIncludeCarExpensesChange={setIncludeCarExpenses}
           onChangeMonth={() => setShowMonthPicker(true)}
-          onAddSalary={() => setShowSalaryModal(true)}
+          onAddSalary={isOwner ? () => setShowSalaryModal(true) : undefined}
+          showSalaryControls={isOwner}
           dailyExpenseReminders={
             env.PUSH_NOTIFICATIONS_ENABLED
               ? notificationPreferences?.dailyExpenseReminders
@@ -159,6 +163,7 @@ export function AllExpensesScreen({ navigation }: AllExpensesScreenProps) {
     ),
     [
       styles.listHeader,
+      isOwner,
       monthLabel,
       totalSpent,
       salary,
@@ -215,12 +220,14 @@ export function AllExpensesScreen({ navigation }: AllExpensesScreenProps) {
         onSelect={setSelectedMonth}
       />
 
-      <AddSalaryModal
-        visible={showSalaryModal}
-        month={selectedMonth}
-        currentSalary={salary}
-        onClose={() => setShowSalaryModal(false)}
-      />
+      {isOwner ? (
+        <AddSalaryModal
+          visible={showSalaryModal}
+          month={selectedMonth}
+          currentSalary={salary}
+          onClose={() => setShowSalaryModal(false)}
+        />
+      ) : null}
 
       {expenses.length === 0 ? (
         <View style={styles.emptyContainer}>

@@ -19,9 +19,15 @@ function parseExpenseDate(value: string): Date {
 }
 
 export const expensesRepository = {
-  findByOwnerIdInRange(ownerId: string, start: Date, end: Date) {
+  findByOwnerIdInRange(
+    ownerId: string,
+    start: Date,
+    end: Date,
+    sources: Array<'general' | 'running_cost'>,
+  ) {
     return ExpenseModel.find({
       ownerId,
+      source: { $in: sources },
       expenseDate: { $gte: start, $lt: end },
     })
       .populate('carId', 'brand model registrationNumber')
@@ -31,6 +37,22 @@ export const expensesRepository = {
 
   findById(expenseId: string) {
     return ExpenseModel.findById(expenseId).lean();
+  },
+
+  existsRunningCostForMaintenanceInRange(
+    ownerId: string,
+    carId: string,
+    maintenanceItemId: string,
+    start: Date,
+    end: Date,
+  ) {
+    return ExpenseModel.exists({
+      ownerId,
+      carId,
+      maintenanceItemId,
+      source: 'running_cost',
+      expenseDate: { $gte: start, $lt: end },
+    });
   },
 
   create(ownerId: string, input: CreateExpenseInput) {
@@ -83,11 +105,17 @@ export const expensesRepository = {
     return ExpenseModel.findByIdAndDelete(expenseId);
   },
 
-  sumTotalByOwnerIdInRange(ownerId: string, start: Date, end: Date) {
+  sumTotalByOwnerIdInRange(
+    ownerId: string,
+    start: Date,
+    end: Date,
+    sources: Array<'general' | 'running_cost'>,
+  ) {
     return ExpenseModel.aggregate<{ total: number }>([
       {
         $match: {
           ownerId: new Types.ObjectId(ownerId),
+          source: { $in: sources },
           expenseDate: { $gte: start, $lt: end },
         },
       },

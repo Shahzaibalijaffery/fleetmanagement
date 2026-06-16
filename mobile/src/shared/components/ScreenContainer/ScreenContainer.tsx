@@ -1,4 +1,4 @@
-import { ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useThemedStyles } from '@/shared/hooks/useThemedStyles';
@@ -15,23 +15,28 @@ export function ScreenContainer({
 }: ScreenContainerProps) {
   const styles = useThemedStyles(createStyles);
 
-  if (scrollable) {
-    return (
-      <SafeAreaView style={[styles.container, style]} edges={edges}>
-        <ScrollView
-          contentContainerStyle={[styles.scrollContent, contentContainerStyle]}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {children}
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
+  const content = scrollable ? (
+    <ScrollView
+      contentContainerStyle={[styles.scrollContent, contentContainerStyle]}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+      nestedScrollEnabled
+    >
+      {children}
+    </ScrollView>
+  ) : (
+    <View style={[styles.content, contentContainerStyle]}>{children}</View>
+  );
 
   return (
     <SafeAreaView style={[styles.container, style]} edges={edges}>
-      <View style={[styles.content, contentContainerStyle]}>{children}</View>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoid}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        {content}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

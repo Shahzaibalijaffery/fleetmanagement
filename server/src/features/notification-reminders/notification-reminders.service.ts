@@ -10,8 +10,8 @@ import {
   type NotificationPreferencesRecord,
 } from './notification-reminders.types';
 import {
+  canSendMaintenanceReminder,
   daysSince,
-  daysSinceLastSent,
   getLocalDayRange,
 } from './notification-reminders.utils';
 
@@ -25,6 +25,23 @@ function getMaintenanceTitle(ruleKey: MaintenanceReminderKey): string {
       return 'General service';
   }
 }
+
+type ContractMaintenanceReminderTarget = {
+  ownerId: { toString(): string };
+  driverId: { toString(): string };
+  startDate: Date;
+  carId: {
+    _id: { toString(): string };
+    brand: string;
+    model: string;
+    registrationNumber: string;
+  };
+  maintenanceChecklist: Array<{
+    _id: { toString(): string };
+    title: string;
+    lastCompletedAt: Date | null | undefined;
+  }>;
+};
 
 export const notificationRemindersService = {
   getPreferences(userId: string) {
@@ -74,8 +91,9 @@ export const notificationRemindersService = {
   },
 
   async sendMaintenanceReminders() {
-    const cars = await notificationRemindersRepository.findPersonalUseCars();
     const now = new Date();
+
+    const cars = await notificationRemindersRepository.findPersonalUseCars();
 
     for (const car of cars) {
       const ownerId = car.ownerId.toString();
@@ -97,12 +115,13 @@ export const notificationRemindersService = {
         }
 
         const log = await maintenanceReminderLogRepository.findByTarget(
+          ownerId,
           car._id.toString(),
           itemId,
           rule.key,
         );
 
-        if (log && daysSinceLastSent(log.lastSentAt, now) < rule.repeatEveryDays) {
+        if (!canSendMaintenanceReminder(log?.lastSentAt, now, rule.repeatEveryDays)) {
           continue;
         }
 
@@ -127,6 +146,104 @@ export const notificationRemindersService = {
           rule.key,
           now,
         );
+      }
+    }
+
+    const contracts = (await notificationRemindersRepository.findActiveContractsForMaintenanceReminders()) as unknown as
+      ContractMaintenanceReminderTarget[];
+
+    for (const contract of contracts) {
+      const ownerId = contract.ownerId.toString();
+      const driverId = contract.driverId.toString();
+      const carId = contract.carId._id.toString();
+      const carLabel = `${contract.carId.brand} ${contract.carId.model}`.trim();
+      const registrationNumber = contract.carId.registrationNumber;
+
+      const [ownerPrefs, driverPrefs] = await Promise.all([
+        notificationPreferencesRepository.getOrCreate(ownerId),
+        notificationPreferencesRepository.getOrCreate(driverId),
+      ]);
+
+      for (const item of contract.maintenanceChecklist ?? []) {
+        const itemId = item._id.toString();
+        const rule = MAINTENANCE_REMINDER_RULES.find((entry) => entry.matchesTitle(item.title));
+
+        if (!rule) {
+          continue;
+        }
+
+        const anchorDate = item.lastCompletedAt ?? contract.startDate;
+        const overdueDays = daysSince(anchorDate, now);
+
+        if (overdueDays < rule.dueAfterDays) {
+          continue;
+        }
+
+        // Send to owner preferences
+        if (ownerPrefs[rule.preferenceField]) {
+          const log = await maintenanceReminderLogRepository.findByTarget(
+            ownerId,
+            carId,
+            itemId,
+            rule.key,
+          );
+
+          if (canSendMaintenanceReminder(log?.lastSentAt, now, rule.repeatEveryDays)) {
+            const title = getMaintenanceTitle(rule.key);
+
+            await sendPushToUser(ownerId, {
+              type: 'maintenance_due',
+              title: `${title} reminder`,
+              body: `${carLabel} (${registrationNumber}) — update ${item.title.toLowerCase()} in FleetLink.`,
+              data: {
+                carId,
+                maintenanceItemId: itemId,
+                maintenanceType: rule.key,
+              },
+            });
+
+            await maintenanceReminderLogRepository.upsertSent(
+              ownerId,
+              carId,
+              itemId,
+              rule.key,
+              now,
+            );
+          }
+        }
+
+        // Send to driver preferences
+        if (driverPrefs[rule.preferenceField]) {
+          const log = await maintenanceReminderLogRepository.findByTarget(
+            driverId,
+            carId,
+            itemId,
+            rule.key,
+          );
+
+          if (canSendMaintenanceReminder(log?.lastSentAt, now, rule.repeatEveryDays)) {
+            const title = getMaintenanceTitle(rule.key);
+
+            await sendPushToUser(driverId, {
+              type: 'maintenance_due',
+              title: `${title} reminder`,
+              body: `${carLabel} (${registrationNumber}) — update ${item.title.toLowerCase()} in FleetLink.`,
+              data: {
+                carId,
+                maintenanceItemId: itemId,
+                maintenanceType: rule.key,
+              },
+            });
+
+            await maintenanceReminderLogRepository.upsertSent(
+              driverId,
+              carId,
+              itemId,
+              rule.key,
+              now,
+            );
+          }
+        }
       }
     }
   },

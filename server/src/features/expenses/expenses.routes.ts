@@ -16,11 +16,11 @@ import {
 
 const router = Router();
 
-router.use(authenticate, authorize('owner'));
+router.use(authenticate, authorize('owner', 'driver'));
 
 router.get('/', validate(listExpensesSchema), expensesController.list);
 router.post('/', validate(createExpenseSchema), expensesController.create);
-router.put('/salary', validate(setMonthlySalarySchema), expensesController.setSalary);
+router.put('/salary', authorize('owner'), validate(setMonthlySalarySchema), expensesController.setSalary);
 router.get('/:expenseId', validate(getExpenseSchema), expensesController.get);
 router.patch('/:expenseId', validate(updateExpenseSchema), expensesController.update);
 router.delete('/:expenseId', validate(deleteExpenseSchema), expensesController.remove);

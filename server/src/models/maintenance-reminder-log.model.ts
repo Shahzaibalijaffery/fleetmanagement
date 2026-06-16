@@ -14,7 +14,7 @@ const maintenanceReminderLogSchema = new Schema(
 );
 
 maintenanceReminderLogSchema.index(
-  { carId: 1, maintenanceItemId: 1, reminderKey: 1 },
+  { userId: 1, carId: 1, maintenanceItemId: 1, reminderKey: 1 },
   { unique: true },
 );
 

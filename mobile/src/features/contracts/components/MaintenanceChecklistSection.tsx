@@ -18,6 +18,17 @@ import {
 import { parseOdometerInput } from '../utils/parseOdometerInput';
 import { createStyles } from './MaintenanceChecklistSection.styles';
 
+import { env } from '@/shared/config/env';
+import {
+  NotificationToggleRow,
+  getMaintenanceReminderPreferenceField,
+  getMaintenanceReminderToggleLabel,
+  useNotificationPreferences,
+  useUpdateNotificationPreferences,
+  type UpdateNotificationPreferencesRequest,
+} from '@/features/notification-reminders';
+import { CompleteContractMaintenanceModal } from './CompleteContractMaintenanceModal';
+
 interface MaintenanceChecklistSectionProps {
   contract: Contract;
 }
@@ -51,9 +62,11 @@ export function MaintenanceChecklistSection({ contract }: MaintenanceChecklistSe
   const styles = useThemedStyles(createStyles);
   const [odometerInput, setOdometerInput] = useState(String(contract.currentOdometerKm));
   const [odometerError, setOdometerError] = useState<string | undefined>();
-  const [completingItemId, setCompletingItemId] = useState<string | null>(null);
+  const [completingItem, setCompletingItem] = useState<MaintenanceChecklistItem | null>(null);
   const updateOdometer = useUpdateContractOdometer(contract.id);
   const completeItem = useCompleteMaintenanceItem(contract.id);
+  const { data: notificationPreferences } = useNotificationPreferences();
+  const updateNotificationPreferences = useUpdateNotificationPreferences();
   const isContractActive =
     contract.status === 'active' && new Date() <= new Date(contract.endDate);
 
@@ -74,21 +87,26 @@ export function MaintenanceChecklistSection({ contract }: MaintenanceChecklistSe
     updateOdometer.mutate(parsed);
   };
 
-  const handleComplete = (item: MaintenanceChecklistItem) => {
-    setCompletingItemId(item.id);
+  const handleComplete = (values: { cost: number; currentOdometerKm?: number }) => {
+    if (!completingItem) {
+      return;
+    }
+
     completeItem.mutate(
       {
-        itemId: item.id,
+        itemId: completingItem.id,
+        cost: values.cost,
         currentOdometerKm:
-          item.scheduleType === 'mileage'
-            ? parseOdometerInput(
+          completingItem.scheduleType === 'mileage'
+            ? (values.currentOdometerKm ??
+              parseOdometerInput(
                 odometerInput,
                 Math.max(contract.currentOdometerKm, contract.initialOdometerKm),
-              )
+              ))
             : undefined,
       },
       {
-        onSettled: () => setCompletingItemId(null),
+        onSuccess: () => setCompletingItem(null),
       },
     );
   };
@@ -160,11 +178,38 @@ export function MaintenanceChecklistSection({ contract }: MaintenanceChecklistSe
                   : ''}
               </AppText>
             ) : null}
+
+            {env.PUSH_NOTIFICATIONS_ENABLED ? (
+              (() => {
+                const preferenceField = getMaintenanceReminderPreferenceField(item.title);
+
+                if (!preferenceField) {
+                  return null;
+                }
+
+                const value = notificationPreferences?.[preferenceField] ?? false;
+
+                return (
+                  <NotificationToggleRow
+                    label={getMaintenanceReminderToggleLabel(preferenceField)}
+                    value={value}
+                    disabled={!notificationPreferences || updateNotificationPreferences.isPending}
+                    accessibilityLabel={`${preferenceField} reminders`}
+                    onValueChange={(nextValue) => {
+                      updateNotificationPreferences.mutate({
+                        [preferenceField]: nextValue,
+                      } as UpdateNotificationPreferencesRequest);
+                    }}
+                  />
+                );
+              })()
+            ) : null}
+
             {isContractActive && item.isWithinContractPeriod ? (
               <Button
                 title="Mark complete"
-                onPress={() => handleComplete(item)}
-                loading={completeItem.isPending && completingItemId === item.id}
+                onPress={() => setCompletingItem(item)}
+                loading={completeItem.isPending && completingItem?.id === item.id}
                 size="sm"
                 style={styles.action}
               />
@@ -172,6 +217,16 @@ export function MaintenanceChecklistSection({ contract }: MaintenanceChecklistSe
           </View>
         ))
       )}
+
+      <CompleteContractMaintenanceModal
+        visible={completingItem != null}
+        item={completingItem}
+        odometerKm={contract.currentOdometerKm}
+        isSubmitting={completeItem.isPending}
+        error={completeItem.error}
+        onClose={() => setCompletingItem(null)}
+        onConfirm={handleComplete}
+      />
     </Card>
   );
 }

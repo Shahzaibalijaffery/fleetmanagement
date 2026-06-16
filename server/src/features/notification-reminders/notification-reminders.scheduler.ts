@@ -6,7 +6,15 @@ import { notificationRemindersService } from './notification-reminders.service';
 
 const timezone = env.NOTIFICATION_TIMEZONE;
 
+let schedulersStarted = false;
+
 export function startNotificationSchedulers() {
+  if (schedulersStarted) {
+    return;
+  }
+
+  schedulersStarted = true;
+
   cron.schedule(
     '0 22 * * *',
     () => {

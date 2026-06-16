@@ -16,7 +16,8 @@ interface ExpenseMonthSummaryProps {
   includeCarExpenses: boolean;
   onIncludeCarExpensesChange: (value: boolean) => void;
   onChangeMonth: () => void;
-  onAddSalary: () => void;
+  onAddSalary?: () => void;
+  showSalaryControls?: boolean;
   dailyExpenseReminders?: boolean;
   onDailyExpenseRemindersChange?: (value: boolean) => void;
   isUpdatingReminders?: boolean;
@@ -56,6 +57,7 @@ export function ExpenseMonthSummary({
   onIncludeCarExpensesChange,
   onChangeMonth,
   onAddSalary,
+  showSalaryControls = true,
   dailyExpenseReminders,
   onDailyExpenseRemindersChange,
   isUpdatingReminders = false,
@@ -86,12 +88,14 @@ export function ExpenseMonthSummary({
             </AppText>
           </View>
         </Pressable>
-        <Button
-          title={hasSalary ? 'Edit salary' : 'Add salary'}
-          onPress={onAddSalary}
-          size="sm"
-          variant="outline"
-        />
+        {showSalaryControls && onAddSalary ? (
+          <Button
+            title={hasSalary ? 'Edit salary' : 'Add salary'}
+            onPress={onAddSalary}
+            size="sm"
+            variant="outline"
+          />
+        ) : null}
       </View>
 
       <View style={styles.spendSection}>
@@ -101,7 +105,7 @@ export function ExpenseMonthSummary({
         <AppText variant="heading2">{formatMoney(totalSpent)}</AppText>
       </View>
 
-      {hasSalary ? (
+      {showSalaryControls && hasSalary ? (
         <View style={styles.breakdown}>
           <BreakdownRow label="Salary" amount={formatMoney(salary)} />
           <BreakdownRow label="Expenses" amount={`− ${formatMoney(totalSpent)}`} tone="warning" />

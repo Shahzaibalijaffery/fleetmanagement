@@ -105,6 +105,12 @@ export function getDriverQuickActionSections(navigation: MainNavigation): QuickA
           subtitle: 'Rent terms and agreements',
           onPress: () => navigation.navigate('Contracts'),
         },
+        {
+          id: 'expenses',
+          title: 'All expenses',
+          subtitle: 'Track spending with optional car costs',
+          onPress: () => navigation.navigate('AllExpenses'),
+        },
       ],
     },
     {

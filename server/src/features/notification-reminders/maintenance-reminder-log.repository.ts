@@ -3,8 +3,18 @@ import { MaintenanceReminderLogModel } from '../../models/maintenance-reminder-l
 import type { MaintenanceReminderKey } from './notification-reminders.types';
 
 export const maintenanceReminderLogRepository = {
-  findByTarget(carId: string, maintenanceItemId: string, reminderKey: MaintenanceReminderKey) {
-    return MaintenanceReminderLogModel.findOne({ carId, maintenanceItemId, reminderKey }).lean();
+  findByTarget(
+    userId: string,
+    carId: string,
+    maintenanceItemId: string,
+    reminderKey: MaintenanceReminderKey,
+  ) {
+    return MaintenanceReminderLogModel.findOne({
+      userId,
+      carId,
+      maintenanceItemId,
+      reminderKey,
+    }).lean();
   },
 
   async upsertSent(
@@ -15,7 +25,7 @@ export const maintenanceReminderLogRepository = {
     sentAt: Date,
   ) {
     return MaintenanceReminderLogModel.findOneAndUpdate(
-      { carId, maintenanceItemId, reminderKey },
+      { userId, carId, maintenanceItemId, reminderKey },
       { userId, carId, maintenanceItemId, reminderKey, lastSentAt: sentAt },
       { upsert: true, new: true, setDefaultsOnInsert: true },
     ).lean();

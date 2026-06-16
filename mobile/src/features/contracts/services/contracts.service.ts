@@ -40,12 +40,16 @@ export const contractsService = {
   completeMaintenanceItem: (
     contractId: string,
     itemId: string,
+    cost: number,
     currentOdometerKm?: number,
   ) =>
     apiClient
       .post<ApiResponse<Contract>>(
         `/contracts/${contractId}/maintenance/${itemId}/complete`,
-        currentOdometerKm != null ? { currentOdometerKm } : undefined,
+        {
+          cost,
+          ...(currentOdometerKm != null ? { currentOdometerKm } : {}),
+        },
       )
       .then((r) => r.data.data),
 };

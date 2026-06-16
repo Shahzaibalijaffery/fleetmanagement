@@ -8,6 +8,9 @@ export const createStyles = (theme: Theme) =>
       flex: 1,
       backgroundColor: theme.colors.background,
     },
+    keyboardAvoid: {
+      flex: 1,
+    },
     content: {
       flex: 1,
       paddingHorizontal: theme.spacing.lg,

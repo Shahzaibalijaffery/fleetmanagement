@@ -20,21 +20,21 @@ export const MAINTENANCE_REMINDER_RULES: MaintenanceReminderRule[] = [
     preferenceField: 'oilChangeReminders',
     matchesTitle: (title) => title.toLowerCase().includes('oil'),
     dueAfterDays: 30,
-    repeatEveryDays: 2,
+    repeatEveryDays: 3,
   },
   {
     key: 'car_wash',
     preferenceField: 'carWashReminders',
     matchesTitle: (title) => title.toLowerCase().includes('wash'),
     dueAfterDays: 7,
-    repeatEveryDays: 2,
+    repeatEveryDays: 3,
   },
   {
     key: 'general_service',
     preferenceField: 'generalServiceReminders',
     matchesTitle: (title) => title.toLowerCase().includes('service'),
     dueAfterDays: 30,
-    repeatEveryDays: 2,
+    repeatEveryDays: 3,
   },
 ];
 
