@@ -14,6 +14,11 @@ export const createStyles = (theme: Theme) =>
     addButton: {
       alignSelf: 'flex-start',
     },
+    headerActions: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: theme.spacing.sm,
+    },
     totalCard: {
       marginBottom: theme.spacing.md,
       gap: theme.spacing.xs,

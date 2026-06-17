@@ -18,7 +18,8 @@ export function useAuthSession() {
 
   const clearSession = () => {
     clearTokens();
-    queryClient.removeQueries({ queryKey: authKeys.all });
+    queryClient.cancelQueries();
+    queryClient.clear();
     setSession(null);
   };
 

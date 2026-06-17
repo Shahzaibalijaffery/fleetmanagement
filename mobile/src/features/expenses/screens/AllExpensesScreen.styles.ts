@@ -10,6 +10,11 @@ export const createStyles = (theme: Theme) =>
     header: {
       marginBottom: theme.spacing.sm,
     },
+    headerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.xs,
+    },
     listHeader: {
       gap: theme.spacing.xs,
       marginBottom: theme.spacing.sm,

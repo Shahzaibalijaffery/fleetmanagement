@@ -1,5 +1,6 @@
 import { apiClient } from '@/shared/api/client';
 import type { ApiResponse } from '@/shared/api/types';
+import { fetchAllPages } from '@/shared/utils/fetchAllPages';
 
 import type {
   CreateExpenseRequest,
@@ -12,6 +13,7 @@ import type {
 } from '../types/expenses.types';
 
 const PAGE_LIMIT = 20;
+const EXPORT_PAGE_LIMIT = 100;
 
 export const expensesService = {
   listExpenses: (params: ListExpensesParams) =>
@@ -26,6 +28,15 @@ export const expensesService = {
         },
       })
       .then((response) => response.data),
+
+  fetchAllExpensesForMonth: (params: Omit<ListExpensesParams, 'page' | 'limit'>) =>
+    fetchAllPages((page) =>
+      expensesService.listExpenses({
+        ...params,
+        page,
+        limit: EXPORT_PAGE_LIMIT,
+      }),
+    ),
 
   setMonthlySalary: (payload: SetMonthlySalaryRequest) =>
     apiClient.put<ApiResponse<MonthlySalary>>('/expenses/salary', payload).then((response) => response.data.data),

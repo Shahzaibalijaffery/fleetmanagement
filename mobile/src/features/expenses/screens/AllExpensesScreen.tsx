@@ -28,6 +28,7 @@ import { ExpenseListSkeleton } from '../components/ExpenseListSkeleton';
 import { ExpenseMonthPickerModal } from '../components/ExpenseMonthPickerModal';
 import { ExpenseMonthSummary } from '../components/ExpenseMonthSummary';
 import { useExpenses } from '../hooks/useExpenses';
+import { useExportAllExpenses } from '../hooks/useExportAllExpenses';
 import type { ExpenseListItem } from '../types/expenses.types';
 import { formatExpenseMonth, getCurrentExpenseMonth } from '../utils/expenseMonth';
 import {
@@ -78,6 +79,11 @@ export function AllExpensesScreen({ navigation }: AllExpensesScreenProps) {
     isFetchingNextPage,
     isRefetching,
   } = useExpenses(filters);
+  const exportExpenses = useExportAllExpenses();
+
+  const handleExport = useCallback(() => {
+    exportExpenses.mutate(filters);
+  }, [exportExpenses, filters]);
 
   const expenses = useMemo(
     () => data?.pages.flatMap((page) => page.data) ?? [],
@@ -205,11 +211,20 @@ export function AllExpensesScreen({ navigation }: AllExpensesScreenProps) {
         title="All expenses"
         style={styles.header}
         right={
-          <Button
-            title="Add"
-            onPress={() => navigation.navigate('AddExpense')}
-            size="sm"
-          />
+          <View style={styles.headerActions}>
+            <Button
+              title="Export"
+              onPress={handleExport}
+              size="sm"
+              variant="outline"
+              loading={exportExpenses.isPending}
+            />
+            <Button
+              title="Add"
+              onPress={() => navigation.navigate('AddExpense')}
+              size="sm"
+            />
+          </View>
         }
       />
 

@@ -1,5 +1,6 @@
 import { apiClient } from '@/shared/api/client';
 import type { ApiResponse } from '@/shared/api/types';
+import { fetchAllPages } from '@/shared/utils/fetchAllPages';
 
 import type {
   AddCarExpenseItemRequest,
@@ -12,12 +13,18 @@ import type {
 } from '../types/car-expenses.types';
 
 const PAGE_LIMIT = 20;
+const EXPORT_PAGE_LIMIT = 100;
 
 export const carExpensesService = {
   listExpenses: (carId: string, params: ListCarExpensesParams) =>
     apiClient
       .get<ListCarExpensesResponse>(`/cars/${carId}/expenses`, { params })
       .then((r) => r.data),
+
+  fetchAllCarExpenses: (carId: string) =>
+    fetchAllPages((page) =>
+      carExpensesService.listExpenses(carId, { page, limit: EXPORT_PAGE_LIMIT }),
+    ),
 
   createExpense: (carId: string, payload: CreateCarExpenseRequest) =>
     apiClient

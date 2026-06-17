@@ -98,7 +98,11 @@ export function CarDetailScreen({ navigation, route }: CarDetailScreenProps) {
       ) : null}
 
       {data.status === 'personal_use' ? (
-        <CarExpensesSection carId={carId} navigation={navigation} />
+        <CarExpensesSection
+          carId={carId}
+          carLabel={`${data.brand} ${data.model}`}
+          navigation={navigation}
+        />
       ) : null}
 
       {data.status === 'assigned' && assignment ? (
