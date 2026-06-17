@@ -25,9 +25,11 @@
     "react": "19.2.3",
     "react-hook-form": "^7.57.0",
     "react-native": "0.85.3",
+    "react-native-blob-util": "^0.24.9",
     "react-native-mmkv": "^3.2.0",
     "react-native-safe-area-context": "^5.4.0",
     "react-native-screens": "^4.11.1",
+    "react-native-share": "^12.3.1",
     "zod": "^3.25.56",
     "zustand": "^5.0.5"
   },
