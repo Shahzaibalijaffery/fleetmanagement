@@ -3,10 +3,15 @@ import type { ApiResponse } from '@/shared/api/types';
 
 import type {
   AuthResponse,
+  CompleteOnboardingRequest,
   ForgotPasswordRequest,
   ForgotPasswordResponse,
+  GoogleSignInRequest,
   LoginRequest,
+  OtpSentResponse,
   RegisterRequest,
+  ResendOtpRequest,
+  VerifyOtpRequest,
 } from '../types/auth.types';
 
 export const authService = {
@@ -15,8 +20,22 @@ export const authService = {
 
   register: (payload: RegisterRequest) =>
     apiClient
-      .post<ApiResponse<AuthResponse>>('/auth/register', payload)
+      .post<ApiResponse<OtpSentResponse>>('/auth/register', payload)
       .then((r) => r.data.data),
+
+  verifyOtp: (payload: VerifyOtpRequest) =>
+    apiClient.post<ApiResponse<AuthResponse>>('/auth/verify-otp', payload).then((r) => r.data.data),
+
+  resendOtp: (payload: ResendOtpRequest) =>
+    apiClient.post<ApiResponse<OtpSentResponse>>('/auth/resend-otp', payload).then((r) => r.data.data),
+
+  completeOnboarding: (payload: CompleteOnboardingRequest) =>
+    apiClient
+      .post<ApiResponse<AuthResponse>>('/auth/complete-onboarding', payload)
+      .then((r) => r.data.data),
+
+  googleSignIn: (payload: GoogleSignInRequest) =>
+    apiClient.post<ApiResponse<AuthResponse>>('/auth/google', payload).then((r) => r.data.data),
 
   refresh: (refreshToken: string) =>
     apiClient

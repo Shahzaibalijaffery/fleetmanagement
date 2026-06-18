@@ -16,10 +16,12 @@
     "express": "^5.2.1",
     "express-rate-limit": "^7.5.0",
     "firebase-admin": "^14.0.0",
+    "google-auth-library": "^10.7.0",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "luxon": "^3.7.2",
     "mongoose": "^8.15.1",
+    "nodemailer": "^9.0.1",
     "typescript": "^5.8.3",
     "zod": "^3.25.56"
   },
@@ -30,6 +32,7 @@
     "@types/jsonwebtoken": "^9.0.9",
     "@types/luxon": "^3.7.1",
     "@types/node": "^22.15.29",
+    "@types/nodemailer": "^8.0.1",
     "nodemon": "^3.1.14",
     "tsx": "^4.19.4"
   }

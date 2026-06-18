@@ -18,19 +18,26 @@ export const loginSchema = z.object({
 
 export const registerSchema = z
   .object({
-    name: personNameSchema,
     email: z.string().trim().email('Invalid email address'),
     password: passwordSchema,
     confirmPassword: z.string().min(1, 'Please confirm your password'),
-    role: z.enum(USER_ROLES, {
-      errorMap: () => ({ message: 'Select owner or driver' }),
-    }),
-    phone: z.union([z.literal(''), phoneSchema]).optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Passwords do not match',
     path: ['confirmPassword'],
   });
+
+export const verifyOtpSchema = z.object({
+  code: z.string().trim().length(6, 'Enter the 6-digit code'),
+});
+
+export const onboardingNameSchema = z.object({
+  name: personNameSchema,
+});
+
+export const onboardingPhoneSchema = z.object({
+  phone: z.union([z.literal(''), phoneSchema]).optional(),
+});
 
 export const forgotPasswordSchema = z.object({
   email: z.string().trim().email('Invalid email address'),
@@ -38,4 +45,8 @@ export const forgotPasswordSchema = z.object({
 
 export type LoginFormValues = z.infer<typeof loginSchema>;
 export type RegisterFormValues = z.infer<typeof registerSchema>;
+export type VerifyOtpFormValues = z.infer<typeof verifyOtpSchema>;
+export type OnboardingNameFormValues = z.infer<typeof onboardingNameSchema>;
 export type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
+
+export type OnboardingRole = (typeof USER_ROLES)[number];

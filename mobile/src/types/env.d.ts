@@ -3,4 +3,5 @@ declare module '@env' {
   export const API_URL_LIVE: string;
   export const API_URL_LOCAL: string;
   export const PUSH_NOTIFICATIONS_ENABLED: string;
+  export const GOOGLE_WEB_CLIENT_ID: string;
 }

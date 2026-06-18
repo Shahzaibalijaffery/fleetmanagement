@@ -9,7 +9,7 @@ import type { AuthStackParamList } from '@/app/navigation/types';
 
 import { AuthErrorBanner } from '../components/AuthErrorBanner';
 import { AuthFormLayout } from '../components/AuthFormLayout';
-import { RoleSelector } from '../components/RoleSelector';
+import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { useRegister } from '../hooks/useRegister';
 import { registerSchema, type RegisterFormValues } from '../validation/auth.schemas';
 
@@ -22,29 +22,23 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
     resolver: zodResolver(registerSchema),
     mode: 'onBlur',
     defaultValues: {
-      name: '',
       email: '',
       password: '',
       confirmPassword: '',
-      role: 'driver',
-      phone: '',
     },
   });
 
   const onSubmit = handleSubmit((values) => {
     register.mutate(
       {
-        name: values.name,
         email: values.email,
         password: values.password,
-        role: values.role,
-        phone: values.phone || undefined,
       },
       {
-        onSuccess: () => {
-          navigation.getParent()?.reset({
-            index: 0,
-            routes: [{ name: 'Main' }],
+        onSuccess: (data) => {
+          navigation.navigate('VerifyOtp', {
+            email: data.email,
+            devOtpCode: data.devOtpCode,
           });
         },
       },
@@ -54,7 +48,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
   return (
     <AuthFormLayout
       title="Create account"
-      subtitle="Join FleetLink as an owner or driver"
+      subtitle="Sign up with your email and password"
       onBack={() => navigation.goBack()}
       footer={
         <Pressable onPress={() => navigation.navigate('Login')} accessibilityRole="button">
@@ -68,20 +62,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
         <AuthErrorBanner message={getErrorMessage(register.error)} />
       ) : null}
 
-      <Controller
-        control={control}
-        name="name"
-        render={({ field, fieldState }) => (
-          <Input
-            label="Full name"
-            value={field.value}
-            onChangeText={field.onChange}
-            onBlur={field.onBlur}
-            error={fieldState.error?.message}
-            autoComplete="name"
-          />
-        )}
-      />
+      <GoogleSignInButton onNavigate={navigation.getParent()!} />
 
       <Controller
         control={control}
@@ -96,34 +77,6 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
             keyboardType="email-address"
             autoCapitalize="none"
             autoComplete="email"
-          />
-        )}
-      />
-
-      <Controller
-        control={control}
-        name="role"
-        render={({ field, fieldState }) => (
-          <RoleSelector
-            value={field.value}
-            onChange={field.onChange}
-            error={fieldState.error?.message}
-          />
-        )}
-      />
-
-      <Controller
-        control={control}
-        name="phone"
-        render={({ field, fieldState }) => (
-          <Input
-            label="Phone (optional)"
-            value={field.value}
-            onChangeText={field.onChange}
-            onBlur={field.onBlur}
-            error={fieldState.error?.message}
-            keyboardType="phone-pad"
-            autoComplete="tel"
           />
         )}
       />
@@ -161,7 +114,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
       />
 
       <Button
-        title="Create account"
+        title="Continue"
         onPress={onSubmit}
         loading={register.isPending}
         fullWidth

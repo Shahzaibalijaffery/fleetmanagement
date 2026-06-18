@@ -6,6 +6,8 @@ export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
   ForgotPassword: undefined;
+  VerifyOtp: { email: string; devOtpCode?: string };
+  Onboarding: undefined;
 };
 
 export type MainStackParamList = {

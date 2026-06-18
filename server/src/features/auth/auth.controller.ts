@@ -21,6 +21,42 @@ export const authController = {
     }
   },
 
+  async verifyOtp(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await authService.verifyOtp(req.body);
+      res.json({ data: result });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async resendOtp(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await authService.resendOtp(req.body.email);
+      res.json({ data: result });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async completeOnboarding(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await authService.completeOnboarding(req.user!.id, req.body);
+      res.json({ data: result });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async googleSignIn(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await authService.googleSignIn(req.body);
+      res.json({ data: result });
+    } catch (error) {
+      next(error);
+    }
+  },
+
   async refresh(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await authService.refresh(req.body);

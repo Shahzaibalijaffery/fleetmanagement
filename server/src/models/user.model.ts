@@ -10,6 +10,9 @@ const userSchema = new Schema(
     password: { type: String, required: true, select: false },
     role: { type: String, enum: USER_ROLES, required: true },
     phone: { type: String, trim: true, default: null },
+    authProvider: { type: String, enum: ['email', 'google'], required: true, default: 'email' },
+    googleId: { type: String, trim: true, default: null, sparse: true },
+    isOnboarded: { type: Boolean, required: true, default: true },
     city: { type: String, trim: true, default: null },
     location: {
       type: {
@@ -42,6 +45,7 @@ const userSchema = new Schema(
 );
 
 userSchema.index({ email: 1 }, { unique: true });
+userSchema.index({ googleId: 1 }, { unique: true, sparse: true });
 userSchema.index({ role: 1 });
 userSchema.index({ role: 1, driverStatus: 1, city: 1 });
 userSchema.index({ role: 1, driverStatus: 1, carTypes: 1 });

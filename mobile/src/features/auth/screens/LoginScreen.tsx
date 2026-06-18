@@ -9,7 +9,9 @@ import type { AuthStackParamList } from '@/app/navigation/types';
 
 import { AuthErrorBanner } from '../components/AuthErrorBanner';
 import { AuthFormLayout } from '../components/AuthFormLayout';
+import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { useLogin } from '../hooks/useLogin';
+import { navigateAfterAuth } from '../utils/navigateAfterAuth';
 import { loginSchema, type LoginFormValues } from '../validation/auth.schemas';
 
 type LoginScreenProps = NativeStackScreenProps<AuthStackParamList, 'Login'>;
@@ -25,11 +27,8 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
 
   const onSubmit = handleSubmit((values) => {
     login.mutate(values, {
-      onSuccess: () => {
-        navigation.getParent()?.reset({
-          index: 0,
-          routes: [{ name: 'Main' }],
-        });
+      onSuccess: (data) => {
+        navigateAfterAuth(navigation.getParent()!, data);
       },
     });
   });
@@ -49,6 +48,8 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
       }
     >
       {login.isError ? <AuthErrorBanner message={getErrorMessage(login.error)} /> : null}
+
+      <GoogleSignInButton onNavigate={navigation.getParent()!} />
 
       <Controller
         control={control}
@@ -92,12 +93,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
         </AppText>
       </Pressable>
 
-      <Button
-        title="Sign in"
-        onPress={onSubmit}
-        loading={login.isPending}
-        fullWidth
-      />
+      <Button title="Sign in" onPress={onSubmit} loading={login.isPending} fullWidth />
     </AuthFormLayout>
   );
 }

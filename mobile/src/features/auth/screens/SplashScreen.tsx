@@ -21,7 +21,12 @@ export function SplashScreen({ navigation }: SplashScreenProps) {
     bootstrap.mutate(undefined, {
       onSettled: () => {
         setBootstrapped(true);
-        const isAuthenticated = useAuthStore.getState().isAuthenticated;
+        const { isAuthenticated, user } = useAuthStore.getState();
+
+        if (isAuthenticated && user?.isOnboarded === false) {
+          navigation.replace('Auth', { screen: 'Onboarding' });
+          return;
+        }
 
         if (isAuthenticated) {
           navigation.replace('Main', { screen: 'Home' });

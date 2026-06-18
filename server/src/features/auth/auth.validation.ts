@@ -11,13 +11,8 @@ const passwordSchema = z
 
 export const registerSchema = z.object({
   body: z.object({
-    name: z.string().trim().min(2, 'Name must be at least 2 characters'),
     email: z.string().trim().email('Invalid email address').toLowerCase(),
     password: passwordSchema,
-    role: z.enum(USER_ROLES, {
-      errorMap: () => ({ message: 'Role must be owner or driver' }),
-    }),
-    phone: z.string().trim().min(10).optional(),
   }),
 });
 
@@ -25,6 +20,35 @@ export const loginSchema = z.object({
   body: z.object({
     email: z.string().trim().email('Invalid email address').toLowerCase(),
     password: z.string().min(1, 'Password is required'),
+  }),
+});
+
+export const verifyOtpSchema = z.object({
+  body: z.object({
+    email: z.string().trim().email('Invalid email address').toLowerCase(),
+    code: z.string().trim().length(6, 'OTP must be 6 digits'),
+  }),
+});
+
+export const resendOtpSchema = z.object({
+  body: z.object({
+    email: z.string().trim().email('Invalid email address').toLowerCase(),
+  }),
+});
+
+export const completeOnboardingSchema = z.object({
+  body: z.object({
+    name: z.string().trim().min(2, 'Name must be at least 2 characters'),
+    role: z.enum(USER_ROLES, {
+      errorMap: () => ({ message: 'Role must be owner or driver' }),
+    }),
+    phone: z.string().trim().min(10).optional(),
+  }),
+});
+
+export const googleSignInSchema = z.object({
+  body: z.object({
+    idToken: z.string().trim().min(1, 'Google ID token is required'),
   }),
 });
 

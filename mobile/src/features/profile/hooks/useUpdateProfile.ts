@@ -18,6 +18,7 @@ function toPublicUser(profile: UserProfile): PublicUser {
     phone: profile.phone,
     city: profile.city,
     experience: profile.experience,
+    isOnboarded: true,
     createdAt: profile.createdAt,
     updatedAt: profile.updatedAt,
   };
