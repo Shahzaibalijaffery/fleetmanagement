@@ -9,6 +9,11 @@ const timezone = env.NOTIFICATION_TIMEZONE;
 let schedulersStarted = false;
 
 export function startNotificationSchedulers() {
+  if (!env.USE_INTERNAL_CRON) {
+    console.log('[notifications] Internal cron disabled — use external /cron endpoints');
+    return;
+  }
+
   if (schedulersStarted) {
     return;
   }
