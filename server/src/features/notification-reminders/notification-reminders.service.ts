@@ -5,6 +5,7 @@ import { notificationPreferencesRepository } from './notification-preferences.re
 import { notificationRemindersRepository } from './notification-reminders.repository';
 import {
   MAINTENANCE_REMINDER_RULES,
+  type ExpenseReminderSlot,
   type MaintenanceReminderKey,
   type NotificationPreferencesRecord,
 } from './notification-reminders.types';
@@ -14,6 +15,11 @@ import {
   getActiveExpenseReminderSlot,
   isSameLocalDay,
 } from './notification-reminders.utils';
+
+export interface ProcessRemindersOptions {
+  testExpenseSlot?: ExpenseReminderSlot;
+  testForce?: boolean;
+}
 
 let isProcessingReminders = false;
 
@@ -58,7 +64,7 @@ export const notificationRemindersService = {
     await maintenanceReminderLogRepository.deleteByCarAndItem(carId, maintenanceItemId);
   },
 
-  async processReminders() {
+  async processReminders(options?: ProcessRemindersOptions) {
     if (isProcessingReminders) {
       return;
     }
@@ -66,16 +72,16 @@ export const notificationRemindersService = {
     isProcessingReminders = true;
 
     try {
-      await this.processExpenseReminders();
+      await this.processExpenseReminders(options);
       await this.processMaintenanceReminders();
     } finally {
       isProcessingReminders = false;
     }
   },
 
-  async processExpenseReminders() {
+  async processExpenseReminders(options?: ProcessRemindersOptions) {
     const now = new Date();
-    const slot = getActiveExpenseReminderSlot(now);
+    const slot = options?.testExpenseSlot ?? getActiveExpenseReminderSlot(now);
 
     if (!slot) {
       return;
@@ -94,7 +100,7 @@ export const notificationRemindersService = {
 
       const lastSentAt = await notificationPreferencesRepository.getExpenseReminderSentAt(ownerId, slot);
 
-      if (lastSentAt && isSameLocalDay(lastSentAt, now)) {
+      if (!options?.testForce && lastSentAt && isSameLocalDay(lastSentAt, now)) {
         continue;
       }
 
