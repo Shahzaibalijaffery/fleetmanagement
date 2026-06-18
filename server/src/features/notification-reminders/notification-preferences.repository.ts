@@ -57,11 +57,24 @@ export const notificationPreferencesRepository = {
     return toRecord(doc as Parameters<typeof toRecord>[0]);
   },
 
-  async findEnabledOwnerIds(preferenceField: keyof UpdateNotificationPreferencesInput) {
-    const docs = await NotificationPreferencesModel.find({ [preferenceField]: true })
-      .select('userId')
-      .lean();
+  async markExpenseReminderSent(userId: string, slot: '22' | '23', sentAt: Date) {
+    const field = slot === '22' ? 'lastExpenseReminderSlot22At' : 'lastExpenseReminderSlot23At';
 
-    return docs.map((doc) => doc.userId.toString());
+    await NotificationPreferencesModel.findOneAndUpdate(
+      { userId },
+      { [field]: sentAt },
+      { upsert: true, setDefaultsOnInsert: true },
+    );
+  },
+
+  async getExpenseReminderSentAt(userId: string, slot: '22' | '23') {
+    const field = slot === '22' ? 'lastExpenseReminderSlot22At' : 'lastExpenseReminderSlot23At';
+    const doc = await NotificationPreferencesModel.findOne({ userId }).select(field).lean();
+
+    if (!doc) {
+      return null;
+    }
+
+    return slot === '22' ? doc.lastExpenseReminderSlot22At ?? null : doc.lastExpenseReminderSlot23At ?? null;
   },
 };

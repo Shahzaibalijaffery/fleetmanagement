@@ -8,18 +8,15 @@ import { dashboardRoutes } from '../features/dashboard/dashboard.routes';
 import { expensesRoutes } from '../features/expenses/expenses.routes';
 import { marketplaceRoutes } from '../features/marketplace/marketplace.routes';
 import { profileRoutes } from '../features/profile/profile.routes';
-import { cronRoutes } from '../features/cron/cron.routes';
 import { pushNotificationsRoutes } from '../features/push-notifications/push-notifications.routes';
 import { notificationRemindersRoutes } from '../features/notification-reminders/notification-reminders.routes';
 import { requestsRoutes } from '../features/requests/requests.routes';
 
+import { healthCheck } from './health';
+
 const router = Router();
 
-router.get('/health', (_req, res) => {
-  res.json({ data: { status: 'ok', timestamp: new Date().toISOString() } });
-});
-
-router.use('/cron', cronRoutes);
+router.get('/health', healthCheck);
 
 router.use('/auth', authRoutes);
 router.use('/profile', profileRoutes);

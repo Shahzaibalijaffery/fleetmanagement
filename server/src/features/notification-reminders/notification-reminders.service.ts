@@ -5,15 +5,17 @@ import { notificationPreferencesRepository } from './notification-preferences.re
 import { notificationRemindersRepository } from './notification-reminders.repository';
 import {
   MAINTENANCE_REMINDER_RULES,
-  type DailyExpenseReminderSlot,
   type MaintenanceReminderKey,
   type NotificationPreferencesRecord,
 } from './notification-reminders.types';
 import {
   canSendMaintenanceReminder,
   daysSince,
-  getLocalDayRange,
+  getActiveExpenseReminderSlot,
+  isSameLocalDay,
 } from './notification-reminders.utils';
+
+let isProcessingReminders = false;
 
 function getMaintenanceTitle(ruleKey: MaintenanceReminderKey): string {
   switch (ruleKey) {
@@ -56,10 +58,31 @@ export const notificationRemindersService = {
     await maintenanceReminderLogRepository.deleteByCarAndItem(carId, maintenanceItemId);
   },
 
-  async sendDailyExpenseReminders(slot: DailyExpenseReminderSlot) {
-    const owners = await notificationRemindersRepository.findOwnerIds();
-    const { start, end } = getLocalDayRange();
+  async processReminders() {
+    if (isProcessingReminders) {
+      return;
+    }
+
+    isProcessingReminders = true;
+
+    try {
+      await this.processExpenseReminders();
+      await this.processMaintenanceReminders();
+    } finally {
+      isProcessingReminders = false;
+    }
+  },
+
+  async processExpenseReminders() {
+    const now = new Date();
+    const slot = getActiveExpenseReminderSlot(now);
+
+    if (!slot) {
+      return;
+    }
+
     const timeLabel = slot === '22' ? '10:00 PM' : '11:00 PM';
+    const owners = await notificationRemindersRepository.findOwnerIds();
 
     for (const owner of owners) {
       const ownerId = owner._id.toString();
@@ -69,28 +92,26 @@ export const notificationRemindersService = {
         continue;
       }
 
-      const hasExpenseToday = await notificationRemindersRepository.hasGeneralExpenseInRange(
-        ownerId,
-        start,
-        end,
-      );
+      const lastSentAt = await notificationPreferencesRepository.getExpenseReminderSentAt(ownerId, slot);
 
-      if (hasExpenseToday) {
+      if (lastSentAt && isSameLocalDay(lastSentAt, now)) {
         continue;
       }
 
       await sendPushToUser(ownerId, {
         type: 'expense_reminder',
         title: 'Add today’s expenses',
-        body: `You have not logged any expenses today. Add them before the day ends (${timeLabel} reminder).`,
+        body: `Reminder to log today’s expenses in FleetLink (${timeLabel}).`,
         data: {
           reminderSlot: slot,
         },
       });
+
+      await notificationPreferencesRepository.markExpenseReminderSent(ownerId, slot, now);
     }
   },
 
-  async sendMaintenanceReminders() {
+  async processMaintenanceReminders() {
     const now = new Date();
 
     const cars = await notificationRemindersRepository.findPersonalUseCars();
@@ -179,7 +200,6 @@ export const notificationRemindersService = {
           continue;
         }
 
-        // Send to owner preferences
         if (ownerPrefs[rule.preferenceField]) {
           const log = await maintenanceReminderLogRepository.findByTarget(
             ownerId,
@@ -212,7 +232,6 @@ export const notificationRemindersService = {
           }
         }
 
-        // Send to driver preferences
         if (driverPrefs[rule.preferenceField]) {
           const log = await maintenanceReminderLogRepository.findByTarget(
             driverId,

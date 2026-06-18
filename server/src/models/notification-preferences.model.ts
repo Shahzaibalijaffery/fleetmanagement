@@ -7,6 +7,8 @@ const notificationPreferencesSchema = new Schema(
     oilChangeReminders: { type: Boolean, required: true, default: true },
     carWashReminders: { type: Boolean, required: true, default: true },
     generalServiceReminders: { type: Boolean, required: true, default: true },
+    lastExpenseReminderSlot22At: { type: Date, default: null },
+    lastExpenseReminderSlot23At: { type: Date, default: null },
   },
   { timestamps: true },
 );

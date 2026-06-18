@@ -71,3 +71,20 @@ export function canSendMaintenanceReminder(
 
   return daysSinceLastSent(lastSentAt, now, timeZone) >= repeatEveryDays;
 }
+
+export function getActiveExpenseReminderSlot(
+  now = new Date(),
+  timeZone = getNotificationTimezone(),
+): '22' | '23' | null {
+  const hour = DateTime.fromJSDate(now, { zone: timeZone }).hour;
+
+  if (hour === 22) {
+    return '22';
+  }
+
+  if (hour === 23) {
+    return '23';
+  }
+
+  return null;
+}

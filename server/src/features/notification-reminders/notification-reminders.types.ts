@@ -59,4 +59,4 @@ export type UpdateNotificationPreferencesInput = Partial<
   >
 >;
 
-export type DailyExpenseReminderSlot = '22' | '23';
+export type ExpenseReminderSlot = '22' | '23';
