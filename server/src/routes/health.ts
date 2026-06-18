@@ -20,19 +20,37 @@ export function healthCheck(req: Request, res: Response) {
   const response: Record<string, unknown> = {
     status: 'ok',
     timestamp: new Date().toISOString(),
+    notificationTestModeEnabled: env.NOTIFICATION_TEST_MODE,
   };
+
+  const hasTestQuery =
+    req.query.testExpenseSlot !== undefined || req.query.testForce !== undefined;
+
+  const testExpenseSlot = parseTestExpenseSlot(req.query.testExpenseSlot);
+  const testForce = parseTestForce(req.query.testForce);
 
   const options = env.NOTIFICATION_TEST_MODE
     ? {
-        testExpenseSlot: parseTestExpenseSlot(req.query.testExpenseSlot),
-        testForce: parseTestForce(req.query.testForce),
+        testExpenseSlot,
+        testForce,
       }
     : undefined;
 
-  if (options?.testExpenseSlot) {
+  if (hasTestQuery) {
     response.notificationTest = {
-      expenseSlot: options.testExpenseSlot,
-      force: options.testForce ?? false,
+      received: {
+        testExpenseSlot: req.query.testExpenseSlot ?? null,
+        testForce: req.query.testForce ?? null,
+      },
+      applied: Boolean(env.NOTIFICATION_TEST_MODE && testExpenseSlot),
+      ...(env.NOTIFICATION_TEST_MODE && testExpenseSlot
+        ? { expenseSlot: testExpenseSlot, force: testForce }
+        : {}),
+      ...(!env.NOTIFICATION_TEST_MODE
+        ? {
+            hint: 'Set NOTIFICATION_TEST_MODE=true on Render and redeploy to use test params',
+          }
+        : {}),
     };
   }
 

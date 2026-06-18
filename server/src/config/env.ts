@@ -11,7 +11,6 @@ const envSchema = z.object({
   FIREBASE_PROJECT_ID: z.string().min(1).optional(),
   FIREBASE_CLIENT_EMAIL: z.string().min(1).optional(),
   FIREBASE_PRIVATE_KEY: z.string().min(1).optional(),
-  FIREBASE_SERVICE_ACCOUNT_JSON: z.string().min(1).optional(),
   NOTIFICATION_TIMEZONE: z.string().default('Asia/Karachi'),
   NOTIFICATION_TEST_MODE: z
     .enum(['true', 'false'])
