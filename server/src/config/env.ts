@@ -12,12 +12,11 @@ const envSchema = z.object({
   FIREBASE_CLIENT_EMAIL: z.string().min(1).optional(),
   FIREBASE_PRIVATE_KEY: z.string().min(1).optional(),
   NOTIFICATION_TIMEZONE: z.string().default('Asia/Karachi'),
+  EXPENSE_REMINDER_TIMES: z.string().default('12:30,13:00,22:00,23:00'),
   NOTIFICATION_TEST_MODE: z
     .enum(['true', 'false'])
     .default('false')
     .transform((value) => value === 'true'),
-  NOTIFICATION_POLL_INTERVAL_MINUTES: z.coerce.number().int().min(0).default(0),
-  EXPENSE_REMINDER_INTERVAL_MINUTES: z.coerce.number().int().min(0).default(0),
   GOOGLE_WEB_CLIENT_ID: z.string().min(1).optional(),
   SMTP_HOST: z.string().min(1).optional(),
   SMTP_PORT: z.coerce.number().default(587),

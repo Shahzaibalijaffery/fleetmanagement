@@ -6,14 +6,15 @@ import { logNotification, logNotificationSent, logNotificationSkip } from './not
 import { notificationPreferencesRepository } from './notification-preferences.repository';
 import { notificationRemindersRepository } from './notification-reminders.repository';
 import {
-  MAINTENANCE_REMINDER_RULES,
   getExpenseReminderSlotConfig,
   type ExpenseReminderSlot,
+} from './expense-reminder-times.config';
+import {
+  MAINTENANCE_REMINDER_RULES,
   type MaintenanceReminderKey,
   type NotificationPreferencesRecord,
 } from './notification-reminders.types';
 import {
-  canSendExpenseReminderByInterval,
   canSendMaintenanceReminder,
   daysSince,
   getActiveExpenseReminderSlot,
@@ -22,7 +23,7 @@ import {
 } from './notification-reminders.utils';
 
 export interface ProcessRemindersOptions {
-  source?: 'health' | 'scheduler' | 'manual';
+  source?: 'health' | 'manual';
   testExpenseSlot?: ExpenseReminderSlot;
   testForce?: boolean;
 }
@@ -68,14 +69,14 @@ type ContractMaintenanceReminderTarget = {
 async function sendExpenseReminder(
   ownerId: string,
   body: string,
-  slot: ExpenseReminderSlot | 'interval',
+  slot: ExpenseReminderSlot,
 ) {
   const result = await sendPushToUser(ownerId, {
     type: 'expense_reminder',
     title: 'Add today’s expenses',
     body,
     data: {
-      reminderSlot: slot === 'interval' ? 'interval' : slot,
+      reminderSlot: slot,
     },
   });
 
@@ -155,8 +156,6 @@ export const notificationRemindersService = {
 
     logNotification('Run started', {
       source,
-      expenseIntervalMinutes: env.EXPENSE_REMINDER_INTERVAL_MINUTES,
-      pollIntervalMinutes: env.NOTIFICATION_POLL_INTERVAL_MINUTES,
       testMode: env.NOTIFICATION_TEST_MODE,
       testExpenseSlot: options?.testExpenseSlot ?? null,
       testForce: options?.testForce ?? false,
@@ -188,55 +187,8 @@ export const notificationRemindersService = {
 
   async processExpenseReminders(options?: ProcessRemindersOptions) {
     const now = new Date();
-    const intervalMinutes = env.EXPENSE_REMINDER_INTERVAL_MINUTES;
     let checked = 0;
     let sent = 0;
-
-    if (intervalMinutes > 0) {
-      const owners = await notificationRemindersRepository.findOwnerIds();
-      checked = owners.length;
-
-      logNotification(`Expense interval mode — every ${intervalMinutes} minute(s)`, {
-        ownerCount: owners.length,
-      });
-
-      for (const owner of owners) {
-        const ownerId = owner._id.toString();
-        const preferences = await notificationPreferencesRepository.getOrCreate(ownerId);
-
-        if (!preferences.dailyExpenseReminders) {
-          logNotificationSkip('expense', 'reminders disabled', { userId: ownerId });
-          continue;
-        }
-
-        const lastSentAt = await notificationPreferencesRepository.getMostRecentExpenseReminderSentAt(ownerId);
-
-        if (
-          !options?.testForce &&
-          !canSendExpenseReminderByInterval(lastSentAt, now, intervalMinutes)
-        ) {
-          logNotificationSkip('expense', 'interval not elapsed', {
-            userId: ownerId,
-            lastSentAt: lastSentAt?.toISOString() ?? null,
-            intervalMinutes,
-          });
-          continue;
-        }
-
-        const delivered = await sendExpenseReminder(
-          ownerId,
-          `Reminder to log today’s expenses in FleetLink (every ${intervalMinutes} min).`,
-          'interval',
-        );
-
-        if (delivered) {
-          await notificationPreferencesRepository.markExpenseReminderSentAt(ownerId, now);
-          sent += 1;
-        }
-      }
-
-      return { checked, sent };
-    }
 
     const slot = options?.testExpenseSlot ?? getActiveExpenseReminderSlot(now);
 

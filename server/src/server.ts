@@ -4,7 +4,7 @@ import { createApp } from './app';
 import { connectDatabase } from './config/database';
 import { env } from './config/env';
 import { isFirebaseConfigured } from './config/firebase';
-import { startNotificationScheduler } from './features/notification-reminders/notification-scheduler';
+import { getExpenseReminderTimesSummary } from './features/notification-reminders/expense-reminder-times.config';
 import { isEmailConfigured } from './shared/services/email.service';
 
 async function bootstrap() {
@@ -24,8 +24,7 @@ async function bootstrap() {
         ? '[notifications] Firebase configured — push notifications enabled'
         : '[notifications] Firebase not configured — push notifications will be skipped',
     );
-
-    startNotificationScheduler();
+    console.log(`[notifications] Expense reminder times (${env.NOTIFICATION_TIMEZONE}): ${getExpenseReminderTimesSummary()}`);
   });
 }
 

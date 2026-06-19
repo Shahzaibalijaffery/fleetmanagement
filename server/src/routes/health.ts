@@ -2,10 +2,14 @@ import type { Request, Response } from 'express';
 
 import { env } from '../config/env';
 import { notificationRemindersService } from '../features/notification-reminders/notification-reminders.service';
-import type { ExpenseReminderSlot } from '../features/notification-reminders/notification-reminders.types';
+import {
+  getExpenseReminderSlotConfigs,
+  isValidExpenseReminderSlot,
+  type ExpenseReminderSlot,
+} from '../features/notification-reminders/expense-reminder-times.config';
 
 function parseTestExpenseSlot(value: unknown): ExpenseReminderSlot | undefined {
-  if (value === '22' || value === '23' || value === '1230' || value === '13') {
+  if (isValidExpenseReminderSlot(value)) {
     return value;
   }
 
@@ -21,6 +25,10 @@ export function healthCheck(req: Request, res: Response) {
     status: 'ok',
     timestamp: new Date().toISOString(),
     notificationTestModeEnabled: env.NOTIFICATION_TEST_MODE,
+    expenseReminderTimes: getExpenseReminderSlotConfigs().map((entry) => ({
+      slot: entry.key,
+      label: entry.label,
+    })),
   };
 
   const hasTestQuery =

@@ -3,9 +3,11 @@ import { DateTime } from 'luxon';
 import { env } from '../../config/env';
 
 import {
-  EXPENSE_REMINDER_SLOT_CONFIGS,
+  getExpenseReminderSlotConfigs,
+  getExpenseReminderTimesSummary,
+  isExpenseReminderSlotActive,
   type ExpenseReminderSlot,
-} from './notification-reminders.types';
+} from './expense-reminder-times.config';
 
 export function getNotificationTimezone(): string {
   return env.NOTIFICATION_TIMEZONE;
@@ -77,58 +79,21 @@ export function canSendMaintenanceReminder(
   return daysSinceLastSent(lastSentAt, now, timeZone) >= repeatEveryDays;
 }
 
-export function minutesSince(
-  date: Date | null | undefined,
-  now = new Date(),
-): number {
-  if (!date) {
-    return Number.POSITIVE_INFINITY;
-  }
-
-  return (now.getTime() - date.getTime()) / (60 * 1000);
-}
-
-export function canSendExpenseReminderByInterval(
-  lastSentAt: Date | null | undefined,
-  now: Date,
-  intervalMinutes: number,
-): boolean {
-  if (intervalMinutes <= 0) {
-    return false;
-  }
-
-  if (!lastSentAt) {
-    return true;
-  }
-
-  return minutesSince(lastSentAt, now) >= intervalMinutes;
-}
-
 export function getActiveExpenseReminderSlot(
   now = new Date(),
   timeZone = getNotificationTimezone(),
 ): ExpenseReminderSlot | null {
   const local = DateTime.fromJSDate(now, { zone: timeZone });
 
-  if (local.hour === 22) {
-    return '22';
-  }
-
-  if (local.hour === 23) {
-    return '23';
-  }
-
-  if (local.hour === 12 && local.minute >= 30) {
-    return '1230';
-  }
-
-  if (local.hour === 13) {
-    return '13';
+  for (const slot of getExpenseReminderSlotConfigs()) {
+    if (isExpenseReminderSlotActive(local, slot)) {
+      return slot.key;
+    }
   }
 
   return null;
 }
 
 export function getExpenseReminderSlotLabels(): string {
-  return EXPENSE_REMINDER_SLOT_CONFIGS.map((entry) => entry.label).join(', ');
+  return getExpenseReminderTimesSummary();
 }
