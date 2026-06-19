@@ -56,7 +56,12 @@ export function healthCheck(req: Request, res: Response) {
 
   res.json({ data: response });
 
-  void notificationRemindersService.processReminders(options).catch((error) => {
-    console.error('[notifications] Health check reminder processing failed:', error);
-  });
+  void notificationRemindersService
+    .processReminders({
+      source: 'health',
+      ...options,
+    })
+    .catch((error) => {
+      console.error('[notifications] Health check reminder processing failed:', error);
+    });
 }

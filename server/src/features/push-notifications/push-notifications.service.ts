@@ -61,7 +61,15 @@ export const pushNotificationsService = {
     const tokens = await deviceTokenRepository.findTokensByUserId(userId);
     const tokenValues = tokens.map((entry) => entry.token);
 
-    return this.sendToTokens(tokenValues, payload);
+    console.log('[notifications] push attempt', {
+      userId,
+      type: payload.type,
+      title: payload.title,
+      tokenCount: tokenValues.length,
+      firebaseConfigured: isFirebaseConfigured(),
+    });
+
+    return this.sendToTokens(tokenValues, payload, userId);
   },
 
   async sendToUsers(userIds: string[], payload: PushNotificationPayload): Promise<SendPushResult> {
@@ -76,15 +84,24 @@ export const pushNotificationsService = {
   async sendToTokens(
     tokens: string[],
     payload: PushNotificationPayload,
+    userId?: string,
   ): Promise<SendPushResult> {
     if (tokens.length === 0) {
+      console.warn('[notifications] push skipped — no device tokens', {
+        userId: userId ?? null,
+        type: payload.type,
+      });
       return buildSkippedResult();
     }
 
     const messaging = getFirebaseMessaging();
 
     if (!messaging || !isFirebaseConfigured()) {
-      console.warn('[push] Firebase is not configured. Notification was not sent.');
+      console.warn('[notifications] push skipped — Firebase not configured', {
+        userId: userId ?? null,
+        type: payload.type,
+        tokenCount: tokens.length,
+      });
       return buildSkippedResult();
     }
 
@@ -110,6 +127,14 @@ export const pushNotificationsService = {
       .filter((token: string | null): token is string => Boolean(token));
 
     await deviceTokenRepository.deleteTokens(invalidTokens);
+
+    console.log('[notifications] push result', {
+      userId: userId ?? null,
+      type: payload.type,
+      successCount: response.successCount,
+      failureCount: response.failureCount,
+      invalidTokenCount: invalidTokens.length,
+    });
 
     return {
       successCount: response.successCount,

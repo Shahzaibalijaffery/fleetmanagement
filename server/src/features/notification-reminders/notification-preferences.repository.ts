@@ -77,4 +77,37 @@ export const notificationPreferencesRepository = {
 
     return slot === '22' ? doc.lastExpenseReminderSlot22At ?? null : doc.lastExpenseReminderSlot23At ?? null;
   },
+
+  async getMostRecentExpenseReminderSentAt(userId: string) {
+    const doc = await NotificationPreferencesModel.findOne({ userId })
+      .select('lastExpenseReminderSlot22At lastExpenseReminderSlot23At')
+      .lean();
+
+    if (!doc) {
+      return null;
+    }
+
+    const timestamps = [doc.lastExpenseReminderSlot22At, doc.lastExpenseReminderSlot23At].filter(
+      (value): value is Date => value instanceof Date,
+    );
+
+    if (timestamps.length === 0) {
+      return null;
+    }
+
+    return timestamps.reduce((latest, current) =>
+      current.getTime() > latest.getTime() ? current : latest,
+    );
+  },
+
+  async markExpenseReminderSentAt(userId: string, sentAt: Date) {
+    await NotificationPreferencesModel.findOneAndUpdate(
+      { userId },
+      {
+        lastExpenseReminderSlot22At: sentAt,
+        lastExpenseReminderSlot23At: sentAt,
+      },
+      { upsert: true, setDefaultsOnInsert: true },
+    );
+  },
 };

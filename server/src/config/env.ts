@@ -16,6 +16,8 @@ const envSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((value) => value === 'true'),
+  NOTIFICATION_POLL_INTERVAL_MINUTES: z.coerce.number().int().min(0).default(0),
+  EXPENSE_REMINDER_INTERVAL_MINUTES: z.coerce.number().int().min(0).default(0),
   GOOGLE_WEB_CLIENT_ID: z.string().min(1).optional(),
   SMTP_HOST: z.string().min(1).optional(),
   SMTP_PORT: z.coerce.number().default(587),

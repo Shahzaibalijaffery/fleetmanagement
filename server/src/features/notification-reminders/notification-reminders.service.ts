@@ -1,6 +1,8 @@
+import { env } from '../../config/env';
 import { sendPushToUser } from '../push-notifications/push-notifications.dispatcher';
 
 import { maintenanceReminderLogRepository } from './maintenance-reminder-log.repository';
+import { logNotification, logNotificationSent, logNotificationSkip } from './notification-reminders.logger';
 import { notificationPreferencesRepository } from './notification-preferences.repository';
 import { notificationRemindersRepository } from './notification-reminders.repository';
 import {
@@ -10,6 +12,7 @@ import {
   type NotificationPreferencesRecord,
 } from './notification-reminders.types';
 import {
+  canSendExpenseReminderByInterval,
   canSendMaintenanceReminder,
   daysSince,
   getActiveExpenseReminderSlot,
@@ -17,8 +20,17 @@ import {
 } from './notification-reminders.utils';
 
 export interface ProcessRemindersOptions {
+  source?: 'health' | 'scheduler' | 'manual';
   testExpenseSlot?: ExpenseReminderSlot;
   testForce?: boolean;
+}
+
+export interface ProcessRemindersSummary {
+  source: string;
+  expenseChecked: number;
+  expenseSent: number;
+  maintenanceSent: number;
+  durationMs: number;
 }
 
 let isProcessingReminders = false;
@@ -51,6 +63,71 @@ type ContractMaintenanceReminderTarget = {
   }>;
 };
 
+async function sendExpenseReminder(
+  ownerId: string,
+  body: string,
+  slot: ExpenseReminderSlot | 'interval',
+) {
+  const result = await sendPushToUser(ownerId, {
+    type: 'expense_reminder',
+    title: 'Add today’s expenses',
+    body,
+    data: {
+      reminderSlot: slot === 'interval' ? 'interval' : slot,
+    },
+  });
+
+  if (result.skipped) {
+    logNotificationSkip('push', 'expense reminder not delivered', {
+      userId: ownerId,
+      slot,
+      successCount: result.successCount,
+      failureCount: result.failureCount,
+    });
+    return false;
+  }
+
+  logNotificationSent('expense', {
+    userId: ownerId,
+    slot,
+    successCount: result.successCount,
+    failureCount: result.failureCount,
+  });
+
+  return result.successCount > 0;
+}
+
+async function sendMaintenanceReminder(
+  userId: string,
+  title: string,
+  body: string,
+  data: Record<string, string>,
+) {
+  const result = await sendPushToUser(userId, {
+    type: 'maintenance_due',
+    title,
+    body,
+    data,
+  });
+
+  if (result.skipped) {
+    logNotificationSkip('push', 'maintenance reminder not delivered', {
+      userId,
+      ...data,
+    });
+    return false;
+  }
+
+  logNotificationSent('maintenance', {
+    userId,
+    ...data,
+    successCount: result.successCount,
+    failureCount: result.failureCount,
+  });
+
+  return result.successCount > 0;
+}
+
 export const notificationRemindersService = {
   getPreferences(userId: string) {
     return notificationPreferencesRepository.getOrCreate(userId);
@@ -64,63 +141,159 @@ export const notificationRemindersService = {
     await maintenanceReminderLogRepository.deleteByCarAndItem(carId, maintenanceItemId);
   },
 
-  async processReminders(options?: ProcessRemindersOptions) {
+  async processReminders(options?: ProcessRemindersOptions): Promise<ProcessRemindersSummary | null> {
     if (isProcessingReminders) {
-      return;
+      logNotificationSkip('expense', 'already processing reminders');
+      return null;
     }
 
     isProcessingReminders = true;
+    const startedAt = Date.now();
+    const source = options?.source ?? 'manual';
+
+    logNotification('Run started', {
+      source,
+      expenseIntervalMinutes: env.EXPENSE_REMINDER_INTERVAL_MINUTES,
+      pollIntervalMinutes: env.NOTIFICATION_POLL_INTERVAL_MINUTES,
+      testMode: env.NOTIFICATION_TEST_MODE,
+      testExpenseSlot: options?.testExpenseSlot ?? null,
+      testForce: options?.testForce ?? false,
+    });
+
+    const summary: ProcessRemindersSummary = {
+      source,
+      expenseChecked: 0,
+      expenseSent: 0,
+      maintenanceSent: 0,
+      durationMs: 0,
+    };
 
     try {
-      await this.processExpenseReminders(options);
-      await this.processMaintenanceReminders();
+      const expenseResult = await this.processExpenseReminders(options);
+      summary.expenseChecked = expenseResult.checked;
+      summary.expenseSent = expenseResult.sent;
+
+      summary.maintenanceSent = await this.processMaintenanceReminders();
     } finally {
       isProcessingReminders = false;
+      summary.durationMs = Date.now() - startedAt;
+
+      logNotification('Run finished', { ...summary });
     }
+
+    return summary;
   },
 
   async processExpenseReminders(options?: ProcessRemindersOptions) {
     const now = new Date();
+    const intervalMinutes = env.EXPENSE_REMINDER_INTERVAL_MINUTES;
+    let checked = 0;
+    let sent = 0;
+
+    if (intervalMinutes > 0) {
+      const owners = await notificationRemindersRepository.findOwnerIds();
+      checked = owners.length;
+
+      logNotification(`Expense interval mode — every ${intervalMinutes} minute(s)`, {
+        ownerCount: owners.length,
+      });
+
+      for (const owner of owners) {
+        const ownerId = owner._id.toString();
+        const preferences = await notificationPreferencesRepository.getOrCreate(ownerId);
+
+        if (!preferences.dailyExpenseReminders) {
+          logNotificationSkip('expense', 'reminders disabled', { userId: ownerId });
+          continue;
+        }
+
+        const lastSentAt = await notificationPreferencesRepository.getMostRecentExpenseReminderSentAt(ownerId);
+
+        if (
+          !options?.testForce &&
+          !canSendExpenseReminderByInterval(lastSentAt, now, intervalMinutes)
+        ) {
+          logNotificationSkip('expense', 'interval not elapsed', {
+            userId: ownerId,
+            lastSentAt: lastSentAt?.toISOString() ?? null,
+            intervalMinutes,
+          });
+          continue;
+        }
+
+        const delivered = await sendExpenseReminder(
+          ownerId,
+          `Reminder to log today’s expenses in FleetLink (every ${intervalMinutes} min).`,
+          'interval',
+        );
+
+        if (delivered) {
+          await notificationPreferencesRepository.markExpenseReminderSentAt(ownerId, now);
+          sent += 1;
+        }
+      }
+
+      return { checked, sent };
+    }
+
     const slot = options?.testExpenseSlot ?? getActiveExpenseReminderSlot(now);
 
     if (!slot) {
-      return;
+      logNotificationSkip('expense', 'outside reminder hours (22:00 or 23:00 local)', {
+        timezone: env.NOTIFICATION_TIMEZONE,
+        now: now.toISOString(),
+      });
+      return { checked, sent };
     }
 
     const timeLabel = slot === '22' ? '10:00 PM' : '11:00 PM';
     const owners = await notificationRemindersRepository.findOwnerIds();
+    checked = owners.length;
+
+    logNotification(`Expense slot mode — hour ${slot}`, { ownerCount: owners.length, timeLabel });
 
     for (const owner of owners) {
       const ownerId = owner._id.toString();
       const preferences = await notificationPreferencesRepository.getOrCreate(ownerId);
 
       if (!preferences.dailyExpenseReminders) {
+        logNotificationSkip('expense', 'reminders disabled', { userId: ownerId });
         continue;
       }
 
       const lastSentAt = await notificationPreferencesRepository.getExpenseReminderSentAt(ownerId, slot);
 
       if (!options?.testForce && lastSentAt && isSameLocalDay(lastSentAt, now)) {
+        logNotificationSkip('expense', 'already sent today for slot', {
+          userId: ownerId,
+          slot,
+          lastSentAt: lastSentAt.toISOString(),
+        });
         continue;
       }
 
-      await sendPushToUser(ownerId, {
-        type: 'expense_reminder',
-        title: 'Add today’s expenses',
-        body: `Reminder to log today’s expenses in FleetLink (${timeLabel}).`,
-        data: {
-          reminderSlot: slot,
-        },
-      });
+      const delivered = await sendExpenseReminder(
+        ownerId,
+        `Reminder to log today’s expenses in FleetLink (${timeLabel}).`,
+        slot,
+      );
 
-      await notificationPreferencesRepository.markExpenseReminderSent(ownerId, slot, now);
+      if (delivered) {
+        await notificationPreferencesRepository.markExpenseReminderSent(ownerId, slot, now);
+        sent += 1;
+      }
     }
+
+    return { checked, sent };
   },
 
   async processMaintenanceReminders() {
     const now = new Date();
+    let sent = 0;
 
     const cars = await notificationRemindersRepository.findPersonalUseCars();
+
+    logNotification('Maintenance check — personal cars', { carCount: cars.length });
 
     for (const car of cars) {
       const ownerId = car.ownerId.toString();
@@ -155,29 +328,34 @@ export const notificationRemindersService = {
         const title = getMaintenanceTitle(rule.key);
         const carLabel = `${car.brand} ${car.model}`.trim();
 
-        await sendPushToUser(ownerId, {
-          type: 'maintenance_due',
-          title: `${title} reminder`,
-          body: `${carLabel} (${car.registrationNumber}) — update ${item.title.toLowerCase()} in FleetLink.`,
-          data: {
+        const delivered = await sendMaintenanceReminder(
+          ownerId,
+          `${title} reminder`,
+          `${carLabel} (${car.registrationNumber}) — update ${item.title.toLowerCase()} in FleetLink.`,
+          {
             carId: car._id.toString(),
             maintenanceItemId: itemId,
             maintenanceType: rule.key,
           },
-        });
-
-        await maintenanceReminderLogRepository.upsertSent(
-          ownerId,
-          car._id.toString(),
-          itemId,
-          rule.key,
-          now,
         );
+
+        if (delivered) {
+          await maintenanceReminderLogRepository.upsertSent(
+            ownerId,
+            car._id.toString(),
+            itemId,
+            rule.key,
+            now,
+          );
+          sent += 1;
+        }
       }
     }
 
     const contracts = (await notificationRemindersRepository.findActiveContractsForMaintenanceReminders()) as unknown as
       ContractMaintenanceReminderTarget[];
+
+    logNotification('Maintenance check — contract cars', { contractCount: contracts.length });
 
     for (const contract of contracts) {
       const ownerId = contract.ownerId.toString();
@@ -217,24 +395,27 @@ export const notificationRemindersService = {
           if (canSendMaintenanceReminder(log?.lastSentAt, now, rule.repeatEveryDays)) {
             const title = getMaintenanceTitle(rule.key);
 
-            await sendPushToUser(ownerId, {
-              type: 'maintenance_due',
-              title: `${title} reminder`,
-              body: `${carLabel} (${registrationNumber}) — update ${item.title.toLowerCase()} in FleetLink.`,
-              data: {
+            const delivered = await sendMaintenanceReminder(
+              ownerId,
+              `${title} reminder`,
+              `${carLabel} (${registrationNumber}) — update ${item.title.toLowerCase()} in FleetLink.`,
+              {
                 carId,
                 maintenanceItemId: itemId,
                 maintenanceType: rule.key,
               },
-            });
-
-            await maintenanceReminderLogRepository.upsertSent(
-              ownerId,
-              carId,
-              itemId,
-              rule.key,
-              now,
             );
+
+            if (delivered) {
+              await maintenanceReminderLogRepository.upsertSent(
+                ownerId,
+                carId,
+                itemId,
+                rule.key,
+                now,
+              );
+              sent += 1;
+            }
           }
         }
 
@@ -249,28 +430,33 @@ export const notificationRemindersService = {
           if (canSendMaintenanceReminder(log?.lastSentAt, now, rule.repeatEveryDays)) {
             const title = getMaintenanceTitle(rule.key);
 
-            await sendPushToUser(driverId, {
-              type: 'maintenance_due',
-              title: `${title} reminder`,
-              body: `${carLabel} (${registrationNumber}) — update ${item.title.toLowerCase()} in FleetLink.`,
-              data: {
+            const delivered = await sendMaintenanceReminder(
+              driverId,
+              `${title} reminder`,
+              `${carLabel} (${registrationNumber}) — update ${item.title.toLowerCase()} in FleetLink.`,
+              {
                 carId,
                 maintenanceItemId: itemId,
                 maintenanceType: rule.key,
               },
-            });
-
-            await maintenanceReminderLogRepository.upsertSent(
-              driverId,
-              carId,
-              itemId,
-              rule.key,
-              now,
             );
+
+            if (delivered) {
+              await maintenanceReminderLogRepository.upsertSent(
+                driverId,
+                carId,
+                itemId,
+                rule.key,
+                now,
+              );
+              sent += 1;
+            }
           }
         }
       }
     }
+
+    return sent;
   },
 };
 

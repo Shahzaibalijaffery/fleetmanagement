@@ -72,6 +72,33 @@ export function canSendMaintenanceReminder(
   return daysSinceLastSent(lastSentAt, now, timeZone) >= repeatEveryDays;
 }
 
+export function minutesSince(
+  date: Date | null | undefined,
+  now = new Date(),
+): number {
+  if (!date) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  return (now.getTime() - date.getTime()) / (60 * 1000);
+}
+
+export function canSendExpenseReminderByInterval(
+  lastSentAt: Date | null | undefined,
+  now: Date,
+  intervalMinutes: number,
+): boolean {
+  if (intervalMinutes <= 0) {
+    return false;
+  }
+
+  if (!lastSentAt) {
+    return true;
+  }
+
+  return minutesSince(lastSentAt, now) >= intervalMinutes;
+}
+
 export function getActiveExpenseReminderSlot(
   now = new Date(),
   timeZone = getNotificationTimezone(),
