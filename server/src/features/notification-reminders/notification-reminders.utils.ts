@@ -118,12 +118,12 @@ export function getActiveExpenseReminderSlot(
     return '23';
   }
 
-  if (local.hour === 0 && local.minute >= 30) {
-    return '0030';
+  if (local.hour === 12 && local.minute >= 30) {
+    return '1230';
   }
 
-  if (local.hour === 1) {
-    return '01';
+  if (local.hour === 13) {
+    return '13';
   }
 
   return null;

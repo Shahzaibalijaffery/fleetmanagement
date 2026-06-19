@@ -9,8 +9,8 @@ const notificationPreferencesSchema = new Schema(
     generalServiceReminders: { type: Boolean, required: true, default: true },
     lastExpenseReminderSlot22At: { type: Date, default: null },
     lastExpenseReminderSlot23At: { type: Date, default: null },
-    lastExpenseReminderSlot0030At: { type: Date, default: null },
-    lastExpenseReminderSlot01At: { type: Date, default: null },
+    lastExpenseReminderSlot1230At: { type: Date, default: null },
+    lastExpenseReminderSlot13At: { type: Date, default: null },
   },
   { timestamps: true },
 );

@@ -59,7 +59,7 @@ export type UpdateNotificationPreferencesInput = Partial<
   >
 >;
 
-export type ExpenseReminderSlot = '22' | '23' | '0030' | '01';
+export type ExpenseReminderSlot = '22' | '23' | '1230' | '13';
 
 export interface ExpenseReminderSlotConfig {
   key: ExpenseReminderSlot;
@@ -67,8 +67,8 @@ export interface ExpenseReminderSlotConfig {
   sentAtField:
     | 'lastExpenseReminderSlot22At'
     | 'lastExpenseReminderSlot23At'
-    | 'lastExpenseReminderSlot0030At'
-    | 'lastExpenseReminderSlot01At';
+    | 'lastExpenseReminderSlot1230At'
+    | 'lastExpenseReminderSlot13At';
 }
 
 export const EXPENSE_REMINDER_SLOT_CONFIGS: ExpenseReminderSlotConfig[] = [
@@ -83,14 +83,14 @@ export const EXPENSE_REMINDER_SLOT_CONFIGS: ExpenseReminderSlotConfig[] = [
     sentAtField: 'lastExpenseReminderSlot23At',
   },
   {
-    key: '0030',
-    label: '12:30 AM',
-    sentAtField: 'lastExpenseReminderSlot0030At',
+    key: '1230',
+    label: '12:30 PM',
+    sentAtField: 'lastExpenseReminderSlot1230At',
   },
   {
-    key: '01',
-    label: '1:00 AM',
-    sentAtField: 'lastExpenseReminderSlot01At',
+    key: '13',
+    label: '1:00 PM',
+    sentAtField: 'lastExpenseReminderSlot13At',
   },
 ];
 
