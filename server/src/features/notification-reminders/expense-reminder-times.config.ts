@@ -99,15 +99,19 @@ export function isExpenseReminderSlotActive(
   local: DateTime,
   slot: ExpenseReminderSlotConfig,
 ): boolean {
-  if (local.hour !== slot.hour) {
-    return false;
-  }
-
   if (slot.minute === 0) {
-    return true;
+    return local.hour === slot.hour;
   }
 
-  return local.minute >= slot.minute;
+  const scheduled = local.startOf('day').set({
+    hour: slot.hour,
+    minute: slot.minute,
+    second: 0,
+    millisecond: 0,
+  });
+  const diffMinutes = local.diff(scheduled, 'minutes').minutes;
+
+  return diffMinutes >= 0 && diffMinutes < env.NOTIFICATION_SLOT_GRACE_MINUTES;
 }
 
 export function getExpenseReminderTimesSummary(): string {

@@ -23,7 +23,7 @@ import {
 } from './notification-reminders.utils';
 
 export interface ProcessRemindersOptions {
-  source?: 'health' | 'manual';
+  source?: 'scheduler' | 'health-test' | 'manual';
   testExpenseSlot?: ExpenseReminderSlot;
   testForce?: boolean;
 }
