@@ -59,4 +59,47 @@ export type UpdateNotificationPreferencesInput = Partial<
   >
 >;
 
-export type ExpenseReminderSlot = '22' | '23';
+export type ExpenseReminderSlot = '22' | '23' | '0030' | '01';
+
+export interface ExpenseReminderSlotConfig {
+  key: ExpenseReminderSlot;
+  label: string;
+  sentAtField:
+    | 'lastExpenseReminderSlot22At'
+    | 'lastExpenseReminderSlot23At'
+    | 'lastExpenseReminderSlot0030At'
+    | 'lastExpenseReminderSlot01At';
+}
+
+export const EXPENSE_REMINDER_SLOT_CONFIGS: ExpenseReminderSlotConfig[] = [
+  {
+    key: '22',
+    label: '10:00 PM',
+    sentAtField: 'lastExpenseReminderSlot22At',
+  },
+  {
+    key: '23',
+    label: '11:00 PM',
+    sentAtField: 'lastExpenseReminderSlot23At',
+  },
+  {
+    key: '0030',
+    label: '12:30 AM',
+    sentAtField: 'lastExpenseReminderSlot0030At',
+  },
+  {
+    key: '01',
+    label: '1:00 AM',
+    sentAtField: 'lastExpenseReminderSlot01At',
+  },
+];
+
+export function getExpenseReminderSlotConfig(slot: ExpenseReminderSlot): ExpenseReminderSlotConfig {
+  const config = EXPENSE_REMINDER_SLOT_CONFIGS.find((entry) => entry.key === slot);
+
+  if (!config) {
+    throw new Error(`Unknown expense reminder slot: ${slot}`);
+  }
+
+  return config;
+}

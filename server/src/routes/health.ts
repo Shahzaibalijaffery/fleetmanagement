@@ -5,7 +5,7 @@ import { notificationRemindersService } from '../features/notification-reminders
 import type { ExpenseReminderSlot } from '../features/notification-reminders/notification-reminders.types';
 
 function parseTestExpenseSlot(value: unknown): ExpenseReminderSlot | undefined {
-  if (value === '22' || value === '23') {
+  if (value === '22' || value === '23' || value === '0030' || value === '01') {
     return value;
   }
 

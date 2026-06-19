@@ -2,6 +2,11 @@ import { DateTime } from 'luxon';
 
 import { env } from '../../config/env';
 
+import {
+  EXPENSE_REMINDER_SLOT_CONFIGS,
+  type ExpenseReminderSlot,
+} from './notification-reminders.types';
+
 export function getNotificationTimezone(): string {
   return env.NOTIFICATION_TIMEZONE;
 }
@@ -102,16 +107,28 @@ export function canSendExpenseReminderByInterval(
 export function getActiveExpenseReminderSlot(
   now = new Date(),
   timeZone = getNotificationTimezone(),
-): '22' | '23' | null {
-  const hour = DateTime.fromJSDate(now, { zone: timeZone }).hour;
+): ExpenseReminderSlot | null {
+  const local = DateTime.fromJSDate(now, { zone: timeZone });
 
-  if (hour === 22) {
+  if (local.hour === 22) {
     return '22';
   }
 
-  if (hour === 23) {
+  if (local.hour === 23) {
     return '23';
   }
 
+  if (local.hour === 0 && local.minute >= 30) {
+    return '0030';
+  }
+
+  if (local.hour === 1) {
+    return '01';
+  }
+
   return null;
+}
+
+export function getExpenseReminderSlotLabels(): string {
+  return EXPENSE_REMINDER_SLOT_CONFIGS.map((entry) => entry.label).join(', ');
 }

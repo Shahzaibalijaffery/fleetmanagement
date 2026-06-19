@@ -1,9 +1,13 @@
 import { NotificationPreferencesModel } from '../../models/notification-preferences.model';
 
 import type {
+  ExpenseReminderSlot,
   NotificationPreferencesRecord,
   UpdateNotificationPreferencesInput,
 } from './notification-reminders.types';
+import { EXPENSE_REMINDER_SLOT_CONFIGS, getExpenseReminderSlotConfig } from './notification-reminders.types';
+
+const EXPENSE_REMINDER_SENT_FIELDS = EXPENSE_REMINDER_SLOT_CONFIGS.map((entry) => entry.sentAtField);
 
 function toRecord(doc: {
   _id: { toString(): string };
@@ -57,8 +61,8 @@ export const notificationPreferencesRepository = {
     return toRecord(doc as Parameters<typeof toRecord>[0]);
   },
 
-  async markExpenseReminderSent(userId: string, slot: '22' | '23', sentAt: Date) {
-    const field = slot === '22' ? 'lastExpenseReminderSlot22At' : 'lastExpenseReminderSlot23At';
+  async markExpenseReminderSent(userId: string, slot: ExpenseReminderSlot, sentAt: Date) {
+    const field = getExpenseReminderSlotConfig(slot).sentAtField;
 
     await NotificationPreferencesModel.findOneAndUpdate(
       { userId },
@@ -67,29 +71,27 @@ export const notificationPreferencesRepository = {
     );
   },
 
-  async getExpenseReminderSentAt(userId: string, slot: '22' | '23') {
-    const field = slot === '22' ? 'lastExpenseReminderSlot22At' : 'lastExpenseReminderSlot23At';
+  async getExpenseReminderSentAt(userId: string, slot: ExpenseReminderSlot) {
+    const field = getExpenseReminderSlotConfig(slot).sentAtField;
     const doc = await NotificationPreferencesModel.findOne({ userId }).select(field).lean();
 
     if (!doc) {
       return null;
     }
 
-    return slot === '22' ? doc.lastExpenseReminderSlot22At ?? null : doc.lastExpenseReminderSlot23At ?? null;
+    return doc[field as keyof typeof doc] as Date | null | undefined ?? null;
   },
 
   async getMostRecentExpenseReminderSentAt(userId: string) {
-    const doc = await NotificationPreferencesModel.findOne({ userId })
-      .select('lastExpenseReminderSlot22At lastExpenseReminderSlot23At')
-      .lean();
+    const selectFields = EXPENSE_REMINDER_SENT_FIELDS.join(' ');
+    const doc = await NotificationPreferencesModel.findOne({ userId }).select(selectFields).lean();
 
     if (!doc) {
       return null;
     }
 
-    const timestamps = [doc.lastExpenseReminderSlot22At, doc.lastExpenseReminderSlot23At].filter(
-      (value): value is Date => value instanceof Date,
-    );
+    const timestamps = EXPENSE_REMINDER_SENT_FIELDS.map((field) => doc[field as keyof typeof doc])
+      .filter((value): value is Date => value instanceof Date);
 
     if (timestamps.length === 0) {
       return null;
@@ -101,12 +103,13 @@ export const notificationPreferencesRepository = {
   },
 
   async markExpenseReminderSentAt(userId: string, sentAt: Date) {
+    const update = Object.fromEntries(
+      EXPENSE_REMINDER_SENT_FIELDS.map((field) => [field, sentAt]),
+    );
+
     await NotificationPreferencesModel.findOneAndUpdate(
       { userId },
-      {
-        lastExpenseReminderSlot22At: sentAt,
-        lastExpenseReminderSlot23At: sentAt,
-      },
+      update,
       { upsert: true, setDefaultsOnInsert: true },
     );
   },

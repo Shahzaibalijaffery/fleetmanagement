@@ -7,6 +7,7 @@ import { notificationPreferencesRepository } from './notification-preferences.re
 import { notificationRemindersRepository } from './notification-reminders.repository';
 import {
   MAINTENANCE_REMINDER_RULES,
+  getExpenseReminderSlotConfig,
   type ExpenseReminderSlot,
   type MaintenanceReminderKey,
   type NotificationPreferencesRecord,
@@ -16,6 +17,7 @@ import {
   canSendMaintenanceReminder,
   daysSince,
   getActiveExpenseReminderSlot,
+  getExpenseReminderSlotLabels,
   isSameLocalDay,
 } from './notification-reminders.utils';
 
@@ -239,14 +241,15 @@ export const notificationRemindersService = {
     const slot = options?.testExpenseSlot ?? getActiveExpenseReminderSlot(now);
 
     if (!slot) {
-      logNotificationSkip('expense', 'outside reminder hours (22:00 or 23:00 local)', {
+      logNotificationSkip('expense', 'outside reminder windows', {
         timezone: env.NOTIFICATION_TIMEZONE,
         now: now.toISOString(),
+        windows: getExpenseReminderSlotLabels(),
       });
       return { checked, sent };
     }
 
-    const timeLabel = slot === '22' ? '10:00 PM' : '11:00 PM';
+    const timeLabel = getExpenseReminderSlotConfig(slot).label;
     const owners = await notificationRemindersRepository.findOwnerIds();
     checked = owners.length;
 
