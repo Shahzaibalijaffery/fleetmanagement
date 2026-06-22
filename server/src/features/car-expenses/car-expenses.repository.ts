@@ -148,6 +148,10 @@ export const carExpensesRepository = {
     return CarExpenseLogModel.findByIdAndDelete(logId);
   },
 
+  findAllByCarId(carId: string) {
+    return CarExpenseLogModel.find({ carId }).lean();
+  },
+
   deleteByCarId(carId: string) {
     return CarExpenseLogModel.deleteMany({ carId });
   },

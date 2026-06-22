@@ -8,6 +8,8 @@ import { carExpensesRepository } from '../car-expenses/car-expenses.repository';
 import type { CarExpenseLogDocument } from '../car-expenses/car-expenses.types';
 import { getLocalDayRange } from '../notification-reminders/notification-reminders.utils';
 
+import { expenseDeletionLogService } from '../../shared/services/expense-deletion-log.service';
+
 import { monthlySalaryRepository } from './monthly-salary.repository';
 import { expensesRepository } from './expenses.repository';
 import type {
@@ -273,7 +275,8 @@ export const expensesService = {
   },
 
   async deleteExpense(ownerId: string, expenseId: string) {
-    await getOwnedExpense(ownerId, expenseId);
+    const expense = await getOwnedExpense(ownerId, expenseId);
+    await expenseDeletionLogService.recordGeneralExpenseDeletion(ownerId, expense);
     await expensesRepository.deleteById(expenseId);
   },
 };

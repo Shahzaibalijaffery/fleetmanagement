@@ -4,6 +4,7 @@ import {
   NotFoundError,
   ValidationError,
 } from '../../shared/errors/AppError';
+import { expenseDeletionLogService } from '../../shared/services/expense-deletion-log.service';
 import { geocodeCity, toGeoPoint } from '../../shared/geo/cityGeocoder';
 import { buildMeta } from '../../shared/types/pagination.types';
 
@@ -200,6 +201,15 @@ export const carsService = {
 
     if (existing.status === 'assigned') {
       throw new ValidationError('Cannot delete a car that is currently assigned');
+    }
+
+    const carLogs = await carExpensesRepository.findAllByCarId(carId);
+
+    for (const log of carLogs) {
+      await expenseDeletionLogService.recordCarLogDeletion(
+        ownerId,
+        log as Parameters<typeof expenseDeletionLogService.recordCarLogDeletion>[1],
+      );
     }
 
     await carExpensesRepository.deleteByCarId(carId);

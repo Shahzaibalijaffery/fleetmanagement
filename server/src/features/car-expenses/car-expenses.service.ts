@@ -1,3 +1,4 @@
+import { expenseDeletionLogService } from '../../shared/services/expense-deletion-log.service';
 import {
   ForbiddenError,
   NotFoundError,
@@ -164,16 +165,19 @@ export const carExpensesService = {
 
   async removeExpenseItem(ownerId: string, carId: string, logId: string, itemId: string) {
     const existing = await getOwnedLog(ownerId, carId, logId);
-    const itemExists = existing.items.some((item) => item._id.toString() === itemId);
+    const item = existing.items.find((entry) => entry._id.toString() === itemId);
 
-    if (!itemExists) {
+    if (!item) {
       throw new NotFoundError('Expense item not found');
     }
 
     if (existing.items.length <= 1) {
+      await expenseDeletionLogService.recordCarLogDeletion(ownerId, existing);
       await carExpensesRepository.deleteById(logId);
       return null;
     }
+
+    await expenseDeletionLogService.recordCarLogItemDeletion(ownerId, existing, item);
 
     const log = await carExpensesRepository.removeItem(logId, itemId);
 
@@ -185,7 +189,8 @@ export const carExpensesService = {
   },
 
   async deleteExpense(ownerId: string, carId: string, logId: string) {
-    await getOwnedLog(ownerId, carId, logId);
+    const log = await getOwnedLog(ownerId, carId, logId);
+    await expenseDeletionLogService.recordCarLogDeletion(ownerId, log);
     await carExpensesRepository.deleteById(logId);
   },
 };
