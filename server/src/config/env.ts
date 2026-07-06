@@ -15,6 +15,10 @@ const envSchema = z.object({
   EXPENSE_REMINDER_TIMES: z.string().default('12:30,13:00,22:00,23:00'),
   NOTIFICATION_CHECK_INTERVAL_MINUTES: z.coerce.number().int().min(1).default(1),
   NOTIFICATION_SLOT_GRACE_MINUTES: z.coerce.number().int().min(1).default(15),
+  NOTIFICATIONS_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
   NOTIFICATION_TEST_MODE: z
     .enum(['true', 'false'])
     .default('false')

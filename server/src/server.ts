@@ -4,6 +4,7 @@ import { createApp } from './app';
 import { connectDatabase } from './config/database';
 import { env } from './config/env';
 import { isFirebaseConfigured } from './config/firebase';
+import { areNotificationsEnabled } from './config/notifications';
 import { getExpenseReminderTimesSummary } from './features/notification-reminders/expense-reminder-times.config';
 import { startNotificationScheduler } from './features/notification-reminders/notification-scheduler';
 import { isEmailConfigured } from './shared/services/email.service';
@@ -20,6 +21,12 @@ async function bootstrap() {
         ? '[email] Nodemailer SMTP configured — OTP emails will be sent'
         : '[email] SMTP not configured — OTP codes log to console only',
     );
+
+    if (!areNotificationsEnabled()) {
+      console.log('[notifications] Paused — set NOTIFICATIONS_ENABLED=true to resume');
+      return;
+    }
+
     console.log(
       isFirebaseConfigured()
         ? '[notifications] Firebase configured — push notifications enabled'

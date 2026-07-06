@@ -1,3 +1,4 @@
+import { areNotificationsEnabled } from '../../config/notifications';
 import { getFirebaseMessaging, isFirebaseConfigured } from '../../config/firebase';
 import { NotFoundError } from '../../shared/errors/AppError';
 
@@ -86,6 +87,10 @@ export const pushNotificationsService = {
     payload: PushNotificationPayload,
     userId?: string,
   ): Promise<SendPushResult> {
+    if (!areNotificationsEnabled()) {
+      return buildSkippedResult();
+    }
+
     if (tokens.length === 0) {
       console.warn('[notifications] push skipped — no device tokens', {
         userId: userId ?? null,

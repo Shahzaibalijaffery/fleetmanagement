@@ -1,3 +1,4 @@
+import { areNotificationsEnabled } from '../../config/notifications';
 import { env } from '../../config/env';
 import { sendPushToUser } from '../push-notifications/push-notifications.dispatcher';
 
@@ -145,6 +146,10 @@ export const notificationRemindersService = {
   },
 
   async processReminders(options?: ProcessRemindersOptions): Promise<ProcessRemindersSummary | null> {
+    if (!areNotificationsEnabled()) {
+      return null;
+    }
+
     if (isProcessingReminders) {
       logNotificationSkip('expense', 'already processing reminders');
       return null;

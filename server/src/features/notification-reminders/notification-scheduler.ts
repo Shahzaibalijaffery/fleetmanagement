@@ -1,9 +1,14 @@
 import { env } from '../../config/env';
+import { areNotificationsEnabled } from '../../config/notifications';
 
 import { logNotification } from './notification-reminders.logger';
 import { notificationRemindersService } from './notification-reminders.service';
 
 export function startNotificationScheduler() {
+  if (!areNotificationsEnabled()) {
+    return;
+  }
+
   const intervalMinutes = env.NOTIFICATION_CHECK_INTERVAL_MINUTES;
   const intervalMs = intervalMinutes * 60 * 1000;
 
